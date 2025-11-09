@@ -1,0 +1,47 @@
+{
+  "Roma": {
+    "anno": 2023,
+    "entrate": {
+      "tributarie": 1500000000,
+      "trasferimenti": 800000000,
+      "extratributarie": 300000000
+    },
+    "spese": {
+      "correnti": 2000000000,
+      "investimenti": 400000000,
+      "rimborso_prestiti": 100000000
+    },
+    "popolazione": 2872800,
+    "spesa_procapite": 870
+  },
+  "Albano Laziale": {
+    "anno": 2023,
+    "entrate": {
+      "tributarie": 25000000,
+      "trasferimenti": 5000000,
+      "extratributarie": 3000000
+    },
+    "spese": {
+      "correnti": 28000000,
+      "investimenti": 3000000,
+      "rimborso_prestiti": 1000000
+    },
+    "popolazione": 41700,
+    "spesa_procapite": 768
+  },
+  "Marino": {
+    "anno": 2023,
+    "entrate": {
+      "tributarie": 28000000,
+      "trasferimenti": 6000000,
+      "extratributarie": 4000000
+    },
+    "spese": {
+      "correnti": 30000000,
+      "investimenti": 5000000,
+      "rimborso_prestiti": 2000000
+    },
+    "popolazione": 43600,
+    "spesa_procapite": 849
+  }
+}

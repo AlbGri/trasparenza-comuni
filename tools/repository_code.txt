@@ -1,0 +1,2822 @@
+REPOSITORY CODE EXPORT
+Total files: 18
+================================================================================
+
+
+================================================================================
+FILE: .env.example
+================================================================================
+
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/trasparenza_comuni
+DATABASE_TEST_URL=postgresql://user:password@localhost:5432/trasparenza_comuni_test
+
+# API Keys (quando serviranno)
+BDAP_API_KEY=
+OPENBILANCI_API_KEY=
+
+# App Config
+DEBUG=True
+SECRET_KEY=your-secret-key-here
+ENVIRONMENT=development
+
+# Server
+HOST=0.0.0.0
+PORT=8000
+
+
+================================================================================
+FILE: .gitignore
+================================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+
+# Data files (troppo grandi per git)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+# Aggiungi queste righe al .gitignore
+.vscode/*
+!.vscode/settings.json
+
+
+================================================================================
+FILE: docker-compose.yml
+================================================================================
+
+
+
+
+================================================================================
+FILE: Makefile
+================================================================================
+
+
+
+
+================================================================================
+FILE: notebooks\01_esplorazione_api.ipynb
+================================================================================
+
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "df08430e",
+   "metadata": {},
+   "source": [
+    "# ISTAT"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "a4d2946c",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "============================================================\n",
+      "🧪 TEST COLLECTOR DATI COMUNI\n",
+      "============================================================\n",
+      "\n",
+      "📊 TEST 1: ISTAT Collector\n",
+      "----------------------------------------\n",
+      "\n",
+      "🔍 Cerco comuni del Lazio...\n",
+      "📥 Download lista comuni da ISTAT...\n",
+      "✅ Scaricati 7896 comuni!\n",
+      "✅ Trovati 5 comuni\n",
+      "\n",
+      "🏛️ Comuni trovati:\n",
+      "  • 56001 (0)\n",
+      "  • 56002 (0)\n",
+      "  • 56003 (0)\n",
+      "  • 56004 (0)\n",
+      "  • 56005 (0)\n",
+      "\n",
+      "📊 TEST 2: Bilanci di Esempio\n",
+      "----------------------------------------\n",
+      "\n",
+      "💰 Genero dati di bilancio di esempio...\n",
+      "✅ Dati di bilancio generati!\n",
+      "\n",
+      "💶 Bilanci comunali:\n",
+      "\n",
+      "  Roma:\n",
+      "    • Popolazione: 2,872,800\n",
+      "    • Entrate totali: €2,600,000,000\n",
+      "    • Spese totali: €2,500,000,000\n",
+      "    • Spesa pro-capite: €870\n",
+      "\n",
+      "  Albano Laziale:\n",
+      "    • Popolazione: 41,700\n",
+      "    • Entrate totali: €33,000,000\n",
+      "    • Spese totali: €32,000,000\n",
+      "    • Spesa pro-capite: €768\n",
+      "\n",
+      "  Marino:\n",
+      "    • Popolazione: 43,600\n",
+      "    • Entrate totali: €38,000,000\n",
+      "    • Spese totali: €37,000,000\n",
+      "    • Spesa pro-capite: €849\n",
+      "\n",
+      "💾 Salvataggio dati...\n",
+      "✅ Dati salvati in data/raw/\n",
+      "\n",
+      "============================================================\n",
+      "✅ TEST COMPLETATO CON SUCCESSO!\n",
+      "============================================================\n"
+     ]
+    }
+   ],
+   "source": [
+    "\"\"\"\n",
+    "Collector per i dati ISTAT\n",
+    "Recupera dati demografici e territoriali dei comuni italiani\n",
+    "\"\"\"\n",
+    "import requests\n",
+    "import pandas as pd\n",
+    "from typing import Dict, List, Optional\n",
+    "import json\n",
+    "from datetime import datetime\n",
+    "\n",
+    "class IstatCollector:\n",
+    "    \"\"\"Raccoglie dati demografici e territoriali da ISTAT\"\"\"\n",
+    "    \n",
+    "    # API ISTAT per i territori\n",
+    "    BASE_URL = \"https://sdmx.istat.it/SDMXWS/rest\"\n",
+    "    TERRITORI_URL = \"https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.csv\"\n",
+    "    \n",
+    "    def __init__(self):\n",
+    "        self.session = requests.Session()\n",
+    "        self.session.headers.update({\n",
+    "            'User-Agent': 'Trasparenza-Comuni/1.0'\n",
+    "        })\n",
+    "        self.comuni_df = None\n",
+    "    \n",
+    "    def get_lista_comuni_csv(self) -> pd.DataFrame:\n",
+    "        \"\"\"\n",
+    "        Scarica la lista aggiornata dei comuni italiani da ISTAT\n",
+    "        \n",
+    "        Returns:\n",
+    "            DataFrame con tutti i comuni italiani\n",
+    "        \"\"\"\n",
+    "        print(\"📥 Download lista comuni da ISTAT...\")\n",
+    "        \n",
+    "        try:\n",
+    "            # ISTAT fornisce un CSV aggiornato con tutti i comuni\n",
+    "            url = \"https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.csv\"\n",
+    "            \n",
+    "            # Scarica il CSV direttamente in un DataFrame\n",
+    "            df = pd.read_csv(url, encoding='latin-1', sep=';')\n",
+    "            \n",
+    "            print(f\"✅ Scaricati {len(df)} comuni!\")\n",
+    "            \n",
+    "            # Salva in cache\n",
+    "            self.comuni_df = df\n",
+    "            \n",
+    "            return df\n",
+    "            \n",
+    "        except Exception as e:\n",
+    "            print(f\"❌ Errore: {e}\")\n",
+    "            print(\"Proviamo con dati di backup locali...\")\n",
+    "            return self.get_backup_data()\n",
+    "    \n",
+    "    def get_backup_data(self) -> pd.DataFrame:\n",
+    "        \"\"\"Dati di backup per testing se ISTAT non risponde\"\"\"\n",
+    "        \n",
+    "        # Alcuni comuni di esempio per testing\n",
+    "        data = {\n",
+    "            'Codice Comune': ['058091', '058001', '058059'],\n",
+    "            'Denominazione': ['Roma', 'Albano Laziale', 'Marino'],\n",
+    "            'Provincia': ['Roma', 'Roma', 'Roma'],\n",
+    "            'Regione': ['Lazio', 'Lazio', 'Lazio'],\n",
+    "            'Popolazione_2023': [2872800, 41700, 43600]\n",
+    "        }\n",
+    "        \n",
+    "        df = pd.DataFrame(data)\n",
+    "        print(f\"📦 Caricati {len(df)} comuni di esempio\")\n",
+    "        return df\n",
+    "    \n",
+    "    def get_comuni_regione(self, regione: str = \"Lazio\", limit: int = 10) -> List[Dict]:\n",
+    "        \"\"\"\n",
+    "        Filtra i comuni per regione\n",
+    "        \n",
+    "        Args:\n",
+    "            regione: Nome della regione\n",
+    "            limit: Numero massimo di comuni\n",
+    "            \n",
+    "        Returns:\n",
+    "            Lista di dizionari con info sui comuni\n",
+    "        \"\"\"\n",
+    "        print(f\"\\n🔍 Cerco comuni del {regione}...\")\n",
+    "        \n",
+    "        if self.comuni_df is None:\n",
+    "            self.comuni_df = self.get_lista_comuni_csv()\n",
+    "        \n",
+    "        # Nomi delle colonne potrebbero variare, proviamo diverse opzioni\n",
+    "        col_regione = None\n",
+    "        col_comune = None\n",
+    "        col_provincia = None\n",
+    "        \n",
+    "        # Cerca le colonne giuste (ISTAT usa nomi in italiano)\n",
+    "        for col in self.comuni_df.columns:\n",
+    "            if 'Regione' in col or 'regione' in col:\n",
+    "                col_regione = col\n",
+    "            if 'Denominazione' in col or 'denominazione' in col or 'Comune' in col:\n",
+    "                col_comune = col\n",
+    "            if 'Provincia' in col or 'provincia' in col:\n",
+    "                col_provincia = col\n",
+    "        \n",
+    "        if not col_regione:\n",
+    "            # Usa dati di backup\n",
+    "            return self.get_backup_data().head(limit).to_dict('records')\n",
+    "        \n",
+    "        # Filtra per regione\n",
+    "        df_filtered = self.comuni_df[\n",
+    "            self.comuni_df[col_regione].str.contains(regione, case=False, na=False)\n",
+    "        ].head(limit)\n",
+    "        \n",
+    "        # Converti in lista di dizionari\n",
+    "        comuni = []\n",
+    "        for _, row in df_filtered.iterrows():\n",
+    "            comuni.append({\n",
+    "                'codice': row.get('Codice Comune', 'N/D'),\n",
+    "                'nome': row.get(col_comune, 'N/D'),\n",
+    "                'provincia': row.get(col_provincia, 'N/D'),\n",
+    "                'regione': row.get(col_regione, 'N/D')\n",
+    "            })\n",
+    "        \n",
+    "        print(f\"✅ Trovati {len(comuni)} comuni\")\n",
+    "        return comuni\n",
+    "\n",
+    "\n",
+    "class OpenDataCollector:\n",
+    "    \"\"\"Collector per dati da portali Open Data\"\"\"\n",
+    "    \n",
+    "    def get_bilanci_sample(self) -> Dict:\n",
+    "        \"\"\"\n",
+    "        Recupera dati di esempio sui bilanci comunali\n",
+    "        \n",
+    "        Returns:\n",
+    "            Dizionario con dati di bilancio di esempio\n",
+    "        \"\"\"\n",
+    "        print(\"\\n💰 Genero dati di bilancio di esempio...\")\n",
+    "        \n",
+    "        # Dati di esempio realistici per il POC\n",
+    "        bilanci = {\n",
+    "            \"Roma\": {\n",
+    "                \"anno\": 2023,\n",
+    "                \"entrate\": {\n",
+    "                    \"tributarie\": 1500000000,\n",
+    "                    \"trasferimenti\": 800000000,\n",
+    "                    \"extratributarie\": 300000000\n",
+    "                },\n",
+    "                \"spese\": {\n",
+    "                    \"correnti\": 2000000000,\n",
+    "                    \"investimenti\": 400000000,\n",
+    "                    \"rimborso_prestiti\": 100000000\n",
+    "                },\n",
+    "                \"popolazione\": 2872800,\n",
+    "                \"spesa_procapite\": 870\n",
+    "            },\n",
+    "            \"Albano Laziale\": {\n",
+    "                \"anno\": 2023,\n",
+    "                \"entrate\": {\n",
+    "                    \"tributarie\": 25000000,\n",
+    "                    \"trasferimenti\": 5000000,\n",
+    "                    \"extratributarie\": 3000000\n",
+    "                },\n",
+    "                \"spese\": {\n",
+    "                    \"correnti\": 28000000,\n",
+    "                    \"investimenti\": 3000000,\n",
+    "                    \"rimborso_prestiti\": 1000000\n",
+    "                },\n",
+    "                \"popolazione\": 41700,\n",
+    "                \"spesa_procapite\": 768\n",
+    "            },\n",
+    "            \"Marino\": {\n",
+    "                \"anno\": 2023,\n",
+    "                \"entrate\": {\n",
+    "                    \"tributarie\": 28000000,\n",
+    "                    \"trasferimenti\": 6000000,\n",
+    "                    \"extratributarie\": 4000000\n",
+    "                },\n",
+    "                \"spese\": {\n",
+    "                    \"correnti\": 30000000,\n",
+    "                    \"investimenti\": 5000000,\n",
+    "                    \"rimborso_prestiti\": 2000000\n",
+    "                },\n",
+    "                \"popolazione\": 43600,\n",
+    "                \"spesa_procapite\": 849\n",
+    "            }\n",
+    "        }\n",
+    "        \n",
+    "        print(\"✅ Dati di bilancio generati!\")\n",
+    "        return bilanci\n",
+    "\n",
+    "\n",
+    "def test_collectors():\n",
+    "    \"\"\"Test completo dei collector\"\"\"\n",
+    "    \n",
+    "    print(\"\\n\" + \"=\"*60)\n",
+    "    print(\"🧪 TEST COLLECTOR DATI COMUNI\")\n",
+    "    print(\"=\"*60)\n",
+    "    \n",
+    "    # Test 1: ISTAT Collector\n",
+    "    print(\"\\n📊 TEST 1: ISTAT Collector\")\n",
+    "    print(\"-\"*40)\n",
+    "    \n",
+    "    istat = IstatCollector()\n",
+    "    comuni = istat.get_comuni_regione(\"Lazio\", limit=5)\n",
+    "    \n",
+    "    if comuni:\n",
+    "        print(\"\\n🏛️ Comuni trovati:\")\n",
+    "        for comune in comuni:\n",
+    "            print(f\"  • {comune['nome']} ({comune['provincia']})\")\n",
+    "    \n",
+    "    # Test 2: Open Data Collector\n",
+    "    print(\"\\n📊 TEST 2: Bilanci di Esempio\")\n",
+    "    print(\"-\"*40)\n",
+    "    \n",
+    "    opendata = OpenDataCollector()\n",
+    "    bilanci = opendata.get_bilanci_sample()\n",
+    "    \n",
+    "    print(\"\\n💶 Bilanci comunali:\")\n",
+    "    for comune, dati in bilanci.items():\n",
+    "        print(f\"\\n  {comune}:\")\n",
+    "        print(f\"    • Popolazione: {dati['popolazione']:,}\")\n",
+    "        print(f\"    • Entrate totali: €{sum(dati['entrate'].values()):,.0f}\")\n",
+    "        print(f\"    • Spese totali: €{sum(dati['spese'].values()):,.0f}\")\n",
+    "        print(f\"    • Spesa pro-capite: €{dati['spesa_procapite']}\")\n",
+    "    \n",
+    "    # Salva i dati per analisi futura\n",
+    "    print(\"\\n💾 Salvataggio dati...\")\n",
+    "    \n",
+    "    import os\n",
+    "    os.makedirs(\"../data/raw/istat\", exist_ok=True)\n",
+    "    \n",
+    "    # Salva comuni\n",
+    "    with open(\"../data/raw/istat/comuni_test.json\", \"w\", encoding='utf-8') as f:\n",
+    "        json.dump(comuni, f, indent=2, ensure_ascii=False)\n",
+    "    \n",
+    "    # Salva bilanci\n",
+    "    with open(\"../data/raw/istat/bilanci_test.json\", \"w\", encoding='utf-8') as f:\n",
+    "        json.dump(bilanci, f, indent=2, ensure_ascii=False)\n",
+    "    \n",
+    "    print(\"✅ Dati salvati in data/raw/\")\n",
+    "    \n",
+    "    print(\"\\n\" + \"=\"*60)\n",
+    "    print(\"✅ TEST COMPLETATO CON SUCCESSO!\")\n",
+    "    print(\"=\"*60)\n",
+    "    \n",
+    "    return comuni, bilanci\n",
+    "\n",
+    "\n",
+    "if __name__ == \"__main__\":\n",
+    "    comuni, bilanci = test_collectors()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0903def0",
+   "metadata": {},
+   "source": [
+    "# BDAP\n",
+    "La Banca Dati Amministrazioni Pubbliche è gestita dalla Ragioneria Generale dello Stato e fornisce dati della Finanza Pubblica con API CKAN per accedere al catalogo completo.\n",
+    "\n",
+    "BDAP utilizza CKAN (Comprehensive Knowledge Archive Network), una piattaforma open source per portali di open data. Le API CKAN permettono di accedere programmaticamente al catalogo completo dei dataset. BDAP offre anche OData API per accedere direttamente ai dati tabellari."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "id": "5062e03c",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "✅ Connessione OK! Trovati 3604 dataset\n",
+      "📁 Lista salvata in ..\\data\\raw\\bdap\\lista_dataset.json\n"
+     ]
+    }
+   ],
+   "source": [
+    "import requests\n",
+    "import json\n",
+    "import pandas as pd\n",
+    "from pathlib import Path\n",
+    "\n",
+    "# Setup cartelle\n",
+    "data_raw = Path('../data/raw/bdap')\n",
+    "data_raw.mkdir(parents=True, exist_ok=True)\n",
+    "\n",
+    "# Base URL per API CKAN di BDAP\n",
+    "BDAP_BASE = \"https://bdap-opendata.rgs.mef.gov.it/SpodCkanApi/api/3/action\"\n",
+    "\n",
+    "def test_bdap_connection():\n",
+    "    \"\"\"Test connessione base a BDAP\"\"\"\n",
+    "    try:\n",
+    "        # Prova a ottenere la lista dei dataset\n",
+    "        url = f\"{BDAP_BASE}/package_list\"\n",
+    "        response = requests.get(url)\n",
+    "        \n",
+    "        if response.status_code == 200:\n",
+    "            data = response.json()\n",
+    "            if data['success']:\n",
+    "                datasets = data['result']\n",
+    "                print(f\"✅ Connessione OK! Trovati {len(datasets)} dataset\")\n",
+    "                return datasets\n",
+    "            else:\n",
+    "                print(\"❌ Errore nella risposta API\")\n",
+    "                return None\n",
+    "        else:\n",
+    "            print(f\"❌ Errore HTTP {response.status_code}\")\n",
+    "            return None\n",
+    "    except Exception as e:\n",
+    "        print(f\"❌ Errore: {e}\")\n",
+    "        return None\n",
+    "\n",
+    "# Esegui test\n",
+    "datasets = test_bdap_connection()\n",
+    "\n",
+    "# Salva lista dataset\n",
+    "if datasets:\n",
+    "    with open(data_raw / 'lista_dataset.json', 'w') as f:\n",
+    "        json.dump(datasets, f, indent=2)\n",
+    "    print(f\"📁 Lista salvata in {data_raw / 'lista_dataset.json'}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "c7d53e3c",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "✅ 'bilanci': 100 dataset trovati\n",
+      "✅ 'comuni': 39 dataset trovati\n",
+      "✅ 'enti locali': 100 dataset trovati\n",
+      "✅ 'armonizzati': 0 dataset trovati\n"
+     ]
+    }
+   ],
+   "source": [
+    "def search_bilanci_comuni():\n",
+    "    \"\"\"Cerca dataset relativi ai bilanci dei comuni\"\"\"\n",
+    "    try:\n",
+    "        url = f\"{BDAP_BASE}/package_search\"\n",
+    "        \n",
+    "        # Cerca dataset con parole chiave\n",
+    "        keywords = ['bilanci', 'comuni', 'enti locali', 'armonizzati']\n",
+    "        \n",
+    "        results = {}\n",
+    "        for keyword in keywords:\n",
+    "            params = {\n",
+    "                'q': keyword,\n",
+    "                'rows': 100  # Numero risultati\n",
+    "            }\n",
+    "            response = requests.get(url, params=params)\n",
+    "            \n",
+    "            if response.status_code == 200:\n",
+    "                data = response.json()\n",
+    "                if data['success']:\n",
+    "                    count = data['result']['count']\n",
+    "                    datasets = data['result']['results']\n",
+    "                    results[keyword] = {\n",
+    "                        'count': count,\n",
+    "                        'datasets': datasets\n",
+    "                    }\n",
+    "                    print(f\"✅ '{keyword}': {count} dataset trovati\")\n",
+    "        \n",
+    "        return results\n",
+    "    except Exception as e:\n",
+    "        print(f\"❌ Errore: {e}\")\n",
+    "        return None\n",
+    "\n",
+    "# Esegui ricerca\n",
+    "bilanci_results = search_bilanci_comuni()\n",
+    "\n",
+    "# Salva risultati\n",
+    "if bilanci_results:\n",
+    "    with open(data_raw / 'bilanci_search_results.json', 'w') as f:\n",
+    "        json.dump(bilanci_results, f, indent=2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "id": "93252224",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "✅ 'SIOPE': 50 dataset\n",
+      "✅ 'enti territoriali': 50 dataset\n",
+      "✅ 'spese enti locali': 50 dataset\n",
+      "✅ 'entrate enti locali': 50 dataset\n",
+      "\n",
+      "💾 Risultati salvati\n"
+     ]
+    }
+   ],
+   "source": [
+    "def search_enti_territoriali():\n",
+    "    \"\"\"Cerca con keyword più precise per enti locali\"\"\"\n",
+    "    BDAP_BASE = \"https://bdap-opendata.rgs.mef.gov.it/SpodCkanApi/api/3/action\"\n",
+    "    \n",
+    "    # Keyword più precise\n",
+    "    precise_keywords = [\n",
+    "        'SIOPE',\n",
+    "        'enti territoriali',\n",
+    "        'bilancio armonizzato',\n",
+    "        'rendiconto gestione',\n",
+    "        'spese enti locali',\n",
+    "        'entrate enti locali',\n",
+    "        'province comuni',\n",
+    "        'amministrazioni locali'\n",
+    "    ]\n",
+    "    \n",
+    "    all_results = {}\n",
+    "    \n",
+    "    for keyword in precise_keywords:\n",
+    "        params = {\n",
+    "            'q': keyword,\n",
+    "            'rows': 50,\n",
+    "            'sort': 'metadata_modified desc'\n",
+    "        }\n",
+    "        \n",
+    "        try:\n",
+    "            response = requests.get(f\"{BDAP_BASE}/package_search\", params=params)\n",
+    "            \n",
+    "            if response.status_code == 200:\n",
+    "                data = response.json()\n",
+    "                if data['success']:\n",
+    "                    count = data['result']['count']\n",
+    "                    \n",
+    "                    if count > 0:\n",
+    "                        all_results[keyword] = {\n",
+    "                            'count': count,\n",
+    "                            'datasets': data['result']['results'][:10]  # Prime 10\n",
+    "                        }\n",
+    "                        print(f\"✅ '{keyword}': {count} dataset\")\n",
+    "        except Exception as e:\n",
+    "            print(f\"❌ Errore con '{keyword}': {e}\")\n",
+    "    \n",
+    "    return all_results\n",
+    "\n",
+    "# Esegui ricerca\n",
+    "precise_results = search_enti_territoriali()\n",
+    "\n",
+    "# Salva\n",
+    "if precise_results:\n",
+    "    with open(data_raw / 'enti_territoriali_search.json', 'w', encoding='utf-8') as f:\n",
+    "        json.dump(precise_results, f, indent=2, ensure_ascii=False)\n",
+    "    \n",
+    "    print(f\"\\n💾 Risultati salvati\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "id": "6c0e8cfb",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "📊 Analisi dei 100 dataset 'enti locali'\n",
+      "\n",
+      "================================================================================\n",
+      "\n",
+      "1. 2023 - Mutui Concessi - Indagine campionaria sui mutui contratti dagli enti territoriali\n",
+      "   ID: spd_mut_spe_con_mtcon_01_2023\n",
+      "\n",
+      "2. 2017 - Rate di Ammortamento - Indagine campionaria sui mutui contratti dagli enti territoriali\n",
+      "   ID: spd_mut_spe_amm_mtamm_01_2017\n",
+      "\n",
+      "3. 2014 - Piemonte - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: 2014_piemonte_gestione_finanziaria_spese_enti_locali\n",
+      "   🎯 Keyword trovate: ['spese']\n",
+      "\n",
+      "4. 2015 - Campania - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg15_01_2015\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "5. 2015 - Marche - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: spd_rnd_spe_ael_reg11_01_2015\n",
+      "   🎯 Keyword trovate: ['spese']\n",
+      "\n",
+      "6. 2013 - Emilia-Romagna - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: spd_rnd_spe_ael_reg08_01_2013\n",
+      "   🎯 Keyword trovate: ['spese']\n",
+      "\n",
+      "7. 2015 - Campania - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: spd_rnd_spe_ael_reg15_01_2015\n",
+      "   🎯 Keyword trovate: ['spese']\n",
+      "\n",
+      "8. 2013 - Calabria - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg18_01_2013\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "9. 2016 - Debito Residuo al 01/01/anno successivo - Indagine campionaria sui mutui contratti dagli enti territoriali\n",
+      "   ID: spd_mut_spe_deb_mtdeb_01_2016\n",
+      "\n",
+      "10. 2015 - Trentino-Alto Adige - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg04_01_2015\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "11. 2013 - Calabria - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: spd_rnd_spe_ael_reg18_01_2013\n",
+      "   🎯 Keyword trovate: ['spese']\n",
+      "\n",
+      "12. 2013 - Valle d'Aosta - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg02_01_2013\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "13. 2014 - Lazio - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg12_01_2014\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "14. 2014 - Valle d'Aosta - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: spd_rnd_spe_ael_reg02_01_2014\n",
+      "   🎯 Keyword trovate: ['spese']\n",
+      "\n",
+      "15. 2014 - Gestione Patrimoniale Conto del Patrimonio Enti Locali\n",
+      "   ID: spd_rnd_csp_ael_gfcsp_01_2014\n",
+      "\n",
+      "16. 2014 - Molise - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg14_01_2014\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "17. 2018 - Debito Residuo al 01/01/anno successivo - Indagine campionaria sui mutui contratti dagli enti territoriali\n",
+      "   ID: spd_mut_spe_deb_mtdeb_01_2018\n",
+      "\n",
+      "18. 2014 - Puglia - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg16_01_2014\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "19. 2014 - Gestione finanziaria Residui passivi Enti Locali\n",
+      "   ID: spd_rnd_spe_arp_gfarp_01_2014\n",
+      "\n",
+      "20. 2015 - Piemonte - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: 2015_piemonte_gestione_finanziaria_spese_enti_locali\n",
+      "   🎯 Keyword trovate: ['spese']\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Analizza i 100 dataset \"enti locali\"\n",
+    "enti_locali_datasets = bilanci_results['enti locali']['datasets']\n",
+    "\n",
+    "print(f\"\\n📊 Analisi dei {len(enti_locali_datasets)} dataset 'enti locali'\\n\")\n",
+    "print(\"=\"*80)\n",
+    "\n",
+    "# Mostra i primi 20 per vedere cosa contengono\n",
+    "for i, ds in enumerate(enti_locali_datasets[:20]):\n",
+    "    title = ds.get('title', '')\n",
+    "    print(f\"\\n{i+1}. {title}\")\n",
+    "    print(f\"   ID: {ds.get('name')}\")\n",
+    "    \n",
+    "    # Cerca keyword di bilanci\n",
+    "    keywords_check = ['bilanci', 'entrate', 'spese', 'siope', 'finanziario', 'contabilità', 'rendiconto']\n",
+    "    title_lower = title.lower()\n",
+    "    \n",
+    "    matching_keywords = [kw for kw in keywords_check if kw in title_lower]\n",
+    "    if matching_keywords:\n",
+    "        print(f\"   🎯 Keyword trovate: {matching_keywords}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "id": "3c40f917",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "✅ 'SIOPE': 100 dataset\n",
+      "✅ 'SIOPE+': 100 dataset\n",
+      "✅ 'incassi pagamenti': 0 dataset\n",
+      "✅ 'flussi cassa enti': 0 dataset\n",
+      "✅ 'tesoreria enti': 0 dataset\n",
+      "\n",
+      "📊 Totale dataset SIOPE unici: 174\n",
+      "\n",
+      "Prime 15 risultati SIOPE:\n",
+      "================================================================================\n",
+      "\n",
+      "1. 2018 - Emilia-Romagna - SIOPE Movimenti mensili delle disponibilità liquide\n",
+      "   ID: spd_rnd_liq_sio_reg08_01_2018\n",
+      "   Aggiornato: 2022-02-10\n",
+      "\n",
+      "2. 2020 - Lazio - SIOPE Movimenti cumulati mensili di Spesa\n",
+      "   ID: spd_rnd_spe_sio_reg12_01_2020\n",
+      "   Aggiornato: 2022-02-14\n",
+      "\n",
+      "3. 2021 - Trentino-Alto Adige - SIOPE Movimenti cumulati mensili di Spesa\n",
+      "   ID: spd_rnd_spe_sio_reg04_01_2021\n",
+      "   Aggiornato: 2022-02-14\n",
+      "\n",
+      "4. 2016 - Valle D'Aosta - SIOPE Movimenti cumulati mensili di Entrata\n",
+      "   ID: spd_rnd_ent_sio_reg02_01_2016\n",
+      "   Aggiornato: 2022-01-28\n",
+      "\n",
+      "5. 2022 - Trentino-Alto Adige - SIOPE Movimenti mensili delle disponibilità liquide\n",
+      "   ID: spd_rnd_liq_sio_reg04_01_2022\n",
+      "   Aggiornato: 2023-10-23\n",
+      "\n",
+      "6. 2019 - Friuli-Venezia Giulia - SIOPE Movimenti mensili delle disponibilità liquide\n",
+      "   ID: spd_rnd_liq_sio_reg06_01_2019\n",
+      "   Aggiornato: 2022-02-11\n",
+      "\n",
+      "7. 2023 - Sicilia - SIOPE Movimenti cumulati mensili di Spesa\n",
+      "   ID: spd_rnd_spe_sio_reg19_01_2023\n",
+      "   Aggiornato: 2024-07-23\n",
+      "\n",
+      "8. 2017 - Basilicata - SIOPE Movimenti cumulati mensili di Entrata\n",
+      "   ID: spd_rnd_ent_sio_reg17_01_2017\n",
+      "   Aggiornato: 2022-02-08\n",
+      "\n",
+      "9. 2024 - Sardegna - SIOPE Movimenti cumulati mensili di Entrata\n",
+      "   ID: spd_rnd_ent_sio_reg20_01_2024\n",
+      "   Aggiornato: 2025-01-23\n",
+      "\n",
+      "10. 2023 - Calabria - SIOPE Movimenti cumulati mensili di Entrata\n",
+      "   ID: spd_rnd_ent_sio_reg18_01_2023\n",
+      "   Aggiornato: 2024-07-23\n",
+      "\n",
+      "11. 2022 - Abruzzo - SIOPE Movimenti mensili delle disponibilità liquide\n",
+      "   ID: spd_rnd_liq_sio_reg13_01_2022\n",
+      "   Aggiornato: 2023-10-23\n",
+      "\n",
+      "12. 2016 - Emilia-Romagna - SIOPE Movimenti mensili delle disponibilità liquide\n",
+      "   ID: spd_rnd_liq_sio_reg08_01_2016\n",
+      "   Aggiornato: 2022-01-28\n",
+      "\n",
+      "13. 2017 - Abruzzo - SIOPE Movimenti cumulati mensili di Spesa\n",
+      "   ID: spd_rnd_spe_sio_reg13_01_2017\n",
+      "   Aggiornato: 2022-02-08\n",
+      "\n",
+      "14. 2024 - Liguria - SIOPE Movimenti cumulati mensili di Spesa\n",
+      "   ID: spd_rnd_spe_sio_reg07_01_2024\n",
+      "   Aggiornato: 2025-01-23\n",
+      "\n",
+      "15. 2019 - Lazio - SIOPE Movimenti cumulati mensili di Spesa\n",
+      "   ID: spd_rnd_spe_sio_reg12_01_2019\n",
+      "   Aggiornato: 2022-02-11\n"
+     ]
+    }
+   ],
+   "source": [
+    "def deep_search_siope():\n",
+    "    \"\"\"Ricerca approfondita per dataset SIOPE\"\"\"\n",
+    "    BDAP_BASE = \"https://bdap-opendata.rgs.mef.gov.it/SpodCkanApi/api/3/action\"\n",
+    "    \n",
+    "    # Varie combinazioni SIOPE\n",
+    "    siope_searches = [\n",
+    "        'SIOPE',\n",
+    "        'SIOPE+',\n",
+    "        'incassi pagamenti',\n",
+    "        'flussi cassa enti',\n",
+    "        'tesoreria enti'\n",
+    "    ]\n",
+    "    \n",
+    "    all_siope = []\n",
+    "    \n",
+    "    for search_term in siope_searches:\n",
+    "        params = {\n",
+    "            'q': search_term,\n",
+    "            'rows': 100\n",
+    "        }\n",
+    "        \n",
+    "        try:\n",
+    "            response = requests.get(f\"{BDAP_BASE}/package_search\", params=params)\n",
+    "            \n",
+    "            if response.status_code == 200:\n",
+    "                data = response.json()\n",
+    "                if data['success']:\n",
+    "                    datasets = data['result']['results']\n",
+    "                    count = data['result']['count']\n",
+    "                    \n",
+    "                    print(f\"✅ '{search_term}': {count} dataset\")\n",
+    "                    \n",
+    "                    for ds in datasets:\n",
+    "                        if ds not in all_siope:\n",
+    "                            all_siope.append(ds)\n",
+    "        except Exception as e:\n",
+    "            print(f\"❌ Errore: {e}\")\n",
+    "    \n",
+    "    print(f\"\\n📊 Totale dataset SIOPE unici: {len(all_siope)}\\n\")\n",
+    "    \n",
+    "    # Mostra i primi 15\n",
+    "    print(\"Prime 15 risultati SIOPE:\")\n",
+    "    print(\"=\"*80)\n",
+    "    \n",
+    "    for i, ds in enumerate(all_siope[:15]):\n",
+    "        print(f\"\\n{i+1}. {ds.get('title')}\")\n",
+    "        print(f\"   ID: {ds.get('name')}\")\n",
+    "        print(f\"   Aggiornato: {ds.get('metadata_modified', 'N/A')[:10]}\")\n",
+    "    \n",
+    "    return all_siope\n",
+    "\n",
+    "# Cerca SIOPE\n",
+    "siope_results = deep_search_siope()\n",
+    "\n",
+    "# Salva\n",
+    "if siope_results:\n",
+    "    with open(data_raw / 'siope_all_datasets.json', 'w', encoding='utf-8') as f:\n",
+    "        json.dump(siope_results, f, indent=2, ensure_ascii=False)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "08c63ca5",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7efc884d",
+   "metadata": {},
+   "source": [
+    "# OpenBilanci\n",
+    "è la fonte più accessibile e user-friendly, gestita da Openpolis, contiene i bilanci armonizzati degli ultimi 15 anni per tutti i comuni italiani in formato open data.\n",
+    "\n",
+    "Non esiste un'API pubblica quindi andrebbe fatto scraping, il robots.txt sembra accettare tutto ma va controllata la licenza (Creative Commons BY-NC-SA 4.0.), in ogni caso non è una finalità commerciale quindi non dovrebbero esserci problemi, ma prima di procedere con lo scraping siccome si basano su BDAP, conviene occuparsi prima di quella."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "1841c412",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "❌ Errore: HTTPSConnectionPool(host='openbilanci.it', port=443): Max retries exceeded with url: /api//comune/015146 (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1016)')))\n",
+      "❌ Errore: HTTPSConnectionPool(host='openbilanci.it', port=443): Max retries exceeded with url: /api//comune/016024 (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1016)')))\n",
+      "❌ Errore: HTTPSConnectionPool(host='openbilanci.it', port=443): Max retries exceeded with url: /api//comune/013075 (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1016)')))\n"
+     ]
+    }
+   ],
+   "source": [
+    "import requests\n",
+    "import pandas as pd\n",
+    "import json\n",
+    "from pathlib import Path\n",
+    "\n",
+    "# Configura cartelle\n",
+    "data_raw = Path('data/raw')\n",
+    "data_raw.mkdir(parents=True, exist_ok=True)\n",
+    "\n",
+    "# Comuni di test\n",
+    "comuni_test = [\n",
+    "    {'nome': 'Milano', 'codice': '015146'},\n",
+    "    {'nome': 'Bergamo', 'codice': '016024'},\n",
+    "    {'nome': 'Crema', 'codice': '013075'}\n",
+    "]\n",
+    "\n",
+    "# Test OpenBilanci\n",
+    "# Nota: dovrai trovare l'endpoint corretto sul loro sito\n",
+    "base_url = \"https://openbilanci.it/api/\"  # URL da verificare\n",
+    "\n",
+    "for comune in comuni_test:\n",
+    "    try:\n",
+    "        # Esempio di chiamata (da adattare)\n",
+    "        response = requests.get(f\"{base_url}/comune/{comune['codice']}\")\n",
+    "        \n",
+    "        if response.status_code == 200:\n",
+    "            data = response.json()\n",
+    "            # Salva raw data\n",
+    "            filepath = data_raw / f\"{comune['nome']}_raw.json\"\n",
+    "            with open(filepath, 'w') as f:\n",
+    "                json.dump(data, f, indent=2)\n",
+    "            print(f\"✅ Scaricati dati per {comune['nome']}\")\n",
+    "        else:\n",
+    "            print(f\"❌ Errore {response.status_code} per {comune['nome']}\")\n",
+    "    except Exception as e:\n",
+    "        print(f\"❌ Errore: {e}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "47f58422",
+   "metadata": {},
+   "source": [
+    "# IOPE+ \n",
+    "offre dati su incassi e pagamenti delle PA, con prospetti per singolo ente, aggregati geografici/demografici e funzionalità di confronto."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "335a5709",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "trasparenza",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.14"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
+
+
+
+================================================================================
+FILE: README.md
+================================================================================
+
+# 🏛️ Trasparenza Comuni
+
+Monitor civico digitale per la trasparenza economico-finanziaria dei comuni italiani.
+
+## 🎯 Obiettivi
+
+- Rendere trasparente e accessibile la gestione economico-finanziaria dei comuni
+- Visualizzare costi, entrate e spese con dashboard user-friendly
+- Evidenziare virtuosità, sprechi e anomalie
+- Favorire il controllo sociale e la consapevolezza civica
+
+## 🚀 Quick Start
+
+### Prerequisiti
+- Python 3.11+
+- PostgreSQL 15+
+- Git
+
+### Installazione
+```bash
+# Clona il repository
+git clone https://github.com/TUO_USERNAME/trasparenza-comuni.git
+cd trasparenza-comuni
+
+# Crea ambiente virtuale
+python -m venv venv
+
+# Attiva ambiente (Windows)
+venv\Scripts\activate
+
+# Attiva ambiente (Linux/Mac)
+source venv/bin/activate
+
+# Installa dipendenze
+pip install -r requirements.txt
+```
+
+## 📁 Struttura Progetto
+```
+trasparenza-comuni/
+├── src/
+│   ├── api/            # FastAPI backend
+│   ├── collectors/     # Data collectors per API pubbliche
+│   ├── database/       # Modelli e gestione DB
+│   ├── analysis/       # Analisi e AI
+│   └── utils/          # Utility functions
+├── data/
+│   ├── raw/           # Dati grezzi scaricati
+│   └── processed/     # Dati elaborati
+├── notebooks/         # Jupyter notebooks per analisi
+├── tests/            # Test suite
+├── docs/             # Documentazione
+└── config/           # File di configurazione
+```
+
+## 🤝 Contributing
+
+Progetto open source - contribuzioni benvenute!
+
+## 📝 Licenza
+
+MIT License - Vedi [LICENSE](LICENSE) per dettagli
+
+
+================================================================================
+FILE: requirements-dev.txt
+================================================================================
+
+
+
+
+================================================================================
+FILE: requirements.txt
+================================================================================
+
+# Core
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+python-dotenv==1.0.0
+
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.12.1
+
+# Data Processing
+pandas==2.1.3
+numpy==1.26.2
+requests==2.31.0
+
+# Scheduling
+apscheduler==3.10.4
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+
+# Utilities
+python-dateutil==2.8.2
+pyyaml==6.0.1
+
+
+================================================================================
+FILE: src\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE: src\analysis\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE: src\api\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE: src\collectors\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE: src\collectors\bdap_collector.py
+================================================================================
+
+"""
+Collector per i dati BDAP (Banca Dati Amministrazioni Pubbliche)
+Recupera i bilanci dei comuni italiani
+"""
+import requests
+import pandas as pd
+from typing import Dict, List, Optional
+import json
+from datetime import datetime
+
+class BDAPCollector:
+    """Raccoglie dati dalla BDAP del MEF"""
+    
+    BASE_URL = "https://bdap-opendata.mef.gov.it/api/v1"
+    
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Trasparenza-Comuni/1.0'
+        })
+    
+    def test_connection(self) -> bool:
+        """Testa la connessione alle API BDAP"""
+        try:
+            response = self.session.get(f"{self.BASE_URL}/public/elenco_amministrazioni")
+            return response.status_code == 200
+        except Exception as e:
+            print(f"❌ Errore connessione: {e}")
+            return False
+    
+    def get_lista_comuni(self, regione: str = "LAZIO", limit: int = 5) -> List[Dict]:
+        """
+        Ottiene la lista dei comuni di una regione
+        
+        Args:
+            regione: Nome della regione (es. "LAZIO")
+            limit: Numero massimo di comuni da recuperare
+        
+        Returns:
+            Lista di dizionari con info sui comuni
+        """
+        print(f"📍 Recupero comuni del {regione}...")
+        
+        # Endpoint per l'elenco amministrazioni
+        url = f"{self.BASE_URL}/public/elenco_amministrazioni"
+        
+        try:
+            response = self.session.get(url)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # Filtra solo i comuni della regione specificata
+            comuni = []
+            for ente in data.get('data', []):
+                if (ente.get('tipo_ente') == 'COMUNE' and 
+                    ente.get('regione', '').upper() == regione.upper()):
+                    comuni.append({
+                        'codice': ente.get('codice_ente'),
+                        'nome': ente.get('denominazione'),
+                        'provincia': ente.get('provincia'),
+                        'regione': ente.get('regione'),
+                        'popolazione': ente.get('popolazione', 0)
+                    })
+                    
+                    if len(comuni) >= limit:
+                        break
+            
+            print(f"✅ Trovati {len(comuni)} comuni")
+            return comuni
+            
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Errore nel recupero dati: {e}")
+            return []
+    
+    def get_bilancio_comune(self, codice_comune: str, anno: int = 2022) -> Dict:
+        """
+        Recupera il bilancio di un comune per un anno specifico
+        
+        Args:
+            codice_comune: Codice del comune
+            anno: Anno di riferimento
+            
+        Returns:
+            Dizionario con i dati di bilancio
+        """
+        print(f"💰 Recupero bilancio {codice_comune} per l'anno {anno}...")
+        
+        # Nota: questo è un esempio - l'endpoint reale potrebbe essere diverso
+        url = f"{self.BASE_URL}/public/bilanci/{codice_comune}/{anno}"
+        
+        try:
+            response = self.session.get(url)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"⚠️ Nessun dato per {codice_comune} anno {anno}")
+                return {}
+        except Exception as e:
+            print(f"❌ Errore: {e}")
+            return {}
+
+
+def test_bdap():
+    """Funzione di test per il collector BDAP"""
+    print("\n" + "="*50)
+    print("🧪 TEST COLLECTOR BDAP")
+    print("="*50 + "\n")
+    
+    # Inizializza il collector
+    collector = BDAPCollector()
+    
+    # Test 1: Connessione
+    print("Test 1: Verifica connessione...")
+    if collector.test_connection():
+        print("✅ Connessione OK!\n")
+    else:
+        print("❌ Connessione fallita\n")
+        return
+    
+    # Test 2: Lista comuni
+    print("Test 2: Recupero 3 comuni del Lazio...")
+    comuni = collector.get_lista_comuni("LAZIO", limit=3)
+    
+    if comuni:
+        print("\n📊 Comuni trovati:")
+        for comune in comuni:
+            print(f"  - {comune['nome']} ({comune['provincia']})")
+            print(f"    Codice: {comune['codice']}")
+            print(f"    Popolazione: {comune.get('popolazione', 'N/D')}")
+    
+    # Test 3: Salva i dati
+    if comuni:
+        print("\n💾 Salvo i dati in data/raw/test_comuni.json")
+        
+        # Assicurati che la cartella esista
+        import os
+        os.makedirs("data/raw", exist_ok=True)
+        
+        with open("data/raw/test_comuni.json", "w", encoding='utf-8') as f:
+            json.dump(comuni, f, indent=2, ensure_ascii=False)
+        
+        print("✅ Dati salvati!")
+    
+    print("\n" + "="*50)
+    print("✅ TEST COMPLETATO")
+    print("="*50)
+
+
+if __name__ == "__main__":
+    test_bdap()
+
+
+================================================================================
+FILE: src\database\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE: src\main.py
+================================================================================
+
+"""
+Trasparenza Comuni - Entry point dell'applicazione
+"""
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+import os
+
+# Carica variabili d'ambiente
+load_dotenv()
+
+# Inizializza FastAPI
+app = FastAPI(
+    title="Trasparenza Comuni API",
+    description="API per il monitor civico digitale dei comuni italiani",
+    version="0.1.0"
+)
+
+# Configura CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/")
+def read_root():
+    return {
+        "message": "Benvenuto in Trasparenza Comuni API",
+        "version": "0.1.0",
+        "status": "active"
+    }
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host=os.getenv("HOST", "0.0.0.0"),
+        port=int(os.getenv("PORT", 8000)),
+        reload=True
+    )
+
+
+================================================================================
+FILE: src\utils\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE: tools\export_repo_to_ai.py
+================================================================================
+
+"""
+Script per estrarre tutti i file di codice da un repository
+e crearli in un unico file per l'analisi AI
+"""
+import os
+from pathlib import Path
+
+# Configurazione
+BASE_PATH = r"C:\Alberto\Sito\trasparenza-comuni"
+OUTPUT_FILE = "repository_code.txt"
+
+# Estensioni di file da includere (solo codice e testo)
+CODE_EXTENSIONS = {
+    '.py', '.js', '.jsx', '.ts', '.tsx', '.html', '.css', '.scss', 
+    '.json', '.xml', '.yaml', '.yml', '.md', '.txt', '.sh', '.bat',
+    '.sql', '.r', '.java', '.c', '.cpp', '.h', '.go', '.rs',
+    '.php', '.rb', '.swift', '.kt', '.dart', '.vue', '.env.example',
+    '.gitignore', '.dockerignore', 'Makefile', 'Dockerfile', 'README',
+    '.ipynb'
+}
+
+# Cartelle da escludere
+EXCLUDE_DIRS = {
+    '.git', '__pycache__', 'node_modules', '.venv', 'venv', 
+    'env', '.env', 'dist', 'build', '.pytest_cache', 
+    '.ipynb_checkpoints', '.vscode', '.idea', 'logs', 'tmp'
+}
+
+# File specifici da escludere
+EXCLUDE_FILES = {
+    'package-lock.json', 'yarn.lock', 'poetry.lock', 
+    '.DS_Store', 'Thumbs.db', 'prompt.md'
+}
+
+def is_binary(file_path):
+    """Verifica se un file è binario"""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            f.read(1024)  # Leggi i primi 1024 caratteri
+        return False
+    except (UnicodeDecodeError, PermissionError):
+        return True
+
+def should_include_file(file_path):
+    """Determina se un file dovrebbe essere incluso"""
+    file_name = file_path.name
+    
+    # Escludi file specifici
+    if file_name in EXCLUDE_FILES:
+        return False
+    
+    # Controlla l'estensione
+    if file_path.suffix.lower() in CODE_EXTENSIONS:
+        return True
+    
+    # Controlla il nome completo del file (per .gitignore, .dockerignore, etc.)
+    if file_name in CODE_EXTENSIONS:
+        return True
+    
+    # Includi file senza estensione che potrebbero essere script
+    if not file_path.suffix and file_name in {'Makefile', 'Dockerfile', 'README'}:
+        return True
+    
+    return False
+
+
+def collect_files(base_path):
+    """Raccoglie tutti i file di codice dal repository"""
+    base_path = Path(base_path)
+    collected_files = []
+    
+    for root, dirs, files in os.walk(base_path):
+        # Rimuovi le directory da escludere dalla lista
+        dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
+        
+        for file_name in files:
+            file_path = Path(root) / file_name
+            
+            # Verifica se il file dovrebbe essere incluso
+            if should_include_file(file_path):
+                # Verifica che non sia binario
+                if not is_binary(file_path):
+                    relative_path = file_path.relative_to(base_path)
+                    collected_files.append((relative_path, file_path))
+    
+    return sorted(collected_files)
+
+def create_combined_file(files, output_file):
+    """Crea un file unico con tutti i contenuti"""
+    separator = "=" * 80
+    
+    with open(output_file, 'w', encoding='utf-8') as out:
+        out.write(f"REPOSITORY CODE EXPORT\n")
+        out.write(f"Total files: {len(files)}\n")
+        out.write(f"{separator}\n\n")
+        
+        for relative_path, file_path in files:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # Scrivi l'header del file
+                out.write(f"\n{separator}\n")
+                out.write(f"FILE: {relative_path}\n")
+                out.write(f"{separator}\n\n")
+                
+                # Scrivi il contenuto
+                out.write(content)
+                out.write("\n\n")
+                
+                print(f"✓ Aggiunto: {relative_path}")
+                
+            except Exception as e:
+                print(f"✗ Errore con {relative_path}: {e}")
+
+def main():
+    print(f"🔍 Scansione repository: {BASE_PATH}")
+    print(f"📁 Esclusione cartelle: {', '.join(EXCLUDE_DIRS)}")
+    print(f"📄 Estensioni incluse: {', '.join(sorted(CODE_EXTENSIONS))}")
+    print()
+    
+    # Raccogli i file
+    files = collect_files(BASE_PATH)
+    print(f"\n✅ Trovati {len(files)} file di codice\n")
+    
+    # Crea il file combinato
+    script_dir = Path(__file__).parent
+    output_path = script_dir / OUTPUT_FILE
+    create_combined_file(files, output_path)
+    
+    print(f"\n🎉 File creato: {output_path}")
+    print(f"📊 Dimensione: {output_path.stat().st_size / 1024:.2f} KB")
+
+if __name__ == "__main__":
+    main()
+
+
+
+================================================================================
+FILE: tools\repository_code.txt
+================================================================================
+
+REPOSITORY CODE EXPORT
+Total files: 18
+================================================================================
+
+
+================================================================================
+FILE: .env.example
+================================================================================
+
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/trasparenza_comuni
+DATABASE_TEST_URL=postgresql://user:password@localhost:5432/trasparenza_comuni_test
+
+# API Keys (quando serviranno)
+BDAP_API_KEY=
+OPENBILANCI_API_KEY=
+
+# App Config
+DEBUG=True
+SECRET_KEY=your-secret-key-here
+ENVIRONMENT=development
+
+# Server
+HOST=0.0.0.0
+PORT=8000
+
+
+================================================================================
+FILE: .gitignore
+================================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+
+# Data files (troppo grandi per git)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb_checkpoints
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+# Aggiungi queste righe al .gitignore
+.vscode/*
+!.vscode/settings.json
+
+
+================================================================================
+FILE: docker-compose.yml
+================================================================================
+
+
+
+
+================================================================================
+FILE: Makefile
+================================================================================
+
+
+
+
+================================================================================
+FILE: notebooks\01_esplorazione_api.ipynb
+================================================================================
+
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "df08430e",
+   "metadata": {},
+   "source": [
+    "# ISTAT"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "a4d2946c",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "============================================================\n",
+      "🧪 TEST COLLECTOR DATI COMUNI\n",
+      "============================================================\n",
+      "\n",
+      "📊 TEST 1: ISTAT Collector\n",
+      "----------------------------------------\n",
+      "\n",
+      "🔍 Cerco comuni del Lazio...\n",
+      "📥 Download lista comuni da ISTAT...\n",
+      "✅ Scaricati 7896 comuni!\n",
+      "✅ Trovati 5 comuni\n",
+      "\n",
+      "🏛️ Comuni trovati:\n",
+      "  • 56001 (0)\n",
+      "  • 56002 (0)\n",
+      "  • 56003 (0)\n",
+      "  • 56004 (0)\n",
+      "  • 56005 (0)\n",
+      "\n",
+      "📊 TEST 2: Bilanci di Esempio\n",
+      "----------------------------------------\n",
+      "\n",
+      "💰 Genero dati di bilancio di esempio...\n",
+      "✅ Dati di bilancio generati!\n",
+      "\n",
+      "💶 Bilanci comunali:\n",
+      "\n",
+      "  Roma:\n",
+      "    • Popolazione: 2,872,800\n",
+      "    • Entrate totali: €2,600,000,000\n",
+      "    • Spese totali: €2,500,000,000\n",
+      "    • Spesa pro-capite: €870\n",
+      "\n",
+      "  Albano Laziale:\n",
+      "    • Popolazione: 41,700\n",
+      "    • Entrate totali: €33,000,000\n",
+      "    • Spese totali: €32,000,000\n",
+      "    • Spesa pro-capite: €768\n",
+      "\n",
+      "  Marino:\n",
+      "    • Popolazione: 43,600\n",
+      "    • Entrate totali: €38,000,000\n",
+      "    • Spese totali: €37,000,000\n",
+      "    • Spesa pro-capite: €849\n",
+      "\n",
+      "💾 Salvataggio dati...\n",
+      "✅ Dati salvati in data/raw/\n",
+      "\n",
+      "============================================================\n",
+      "✅ TEST COMPLETATO CON SUCCESSO!\n",
+      "============================================================\n"
+     ]
+    }
+   ],
+   "source": [
+    "\"\"\"\n",
+    "Collector per i dati ISTAT\n",
+    "Recupera dati demografici e territoriali dei comuni italiani\n",
+    "\"\"\"\n",
+    "import requests\n",
+    "import pandas as pd\n",
+    "from typing import Dict, List, Optional\n",
+    "import json\n",
+    "from datetime import datetime\n",
+    "\n",
+    "class IstatCollector:\n",
+    "    \"\"\"Raccoglie dati demografici e territoriali da ISTAT\"\"\"\n",
+    "    \n",
+    "    # API ISTAT per i territori\n",
+    "    BASE_URL = \"https://sdmx.istat.it/SDMXWS/rest\"\n",
+    "    TERRITORI_URL = \"https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.csv\"\n",
+    "    \n",
+    "    def __init__(self):\n",
+    "        self.session = requests.Session()\n",
+    "        self.session.headers.update({\n",
+    "            'User-Agent': 'Trasparenza-Comuni/1.0'\n",
+    "        })\n",
+    "        self.comuni_df = None\n",
+    "    \n",
+    "    def get_lista_comuni_csv(self) -> pd.DataFrame:\n",
+    "        \"\"\"\n",
+    "        Scarica la lista aggiornata dei comuni italiani da ISTAT\n",
+    "        \n",
+    "        Returns:\n",
+    "            DataFrame con tutti i comuni italiani\n",
+    "        \"\"\"\n",
+    "        print(\"📥 Download lista comuni da ISTAT...\")\n",
+    "        \n",
+    "        try:\n",
+    "            # ISTAT fornisce un CSV aggiornato con tutti i comuni\n",
+    "            url = \"https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.csv\"\n",
+    "            \n",
+    "            # Scarica il CSV direttamente in un DataFrame\n",
+    "            df = pd.read_csv(url, encoding='latin-1', sep=';')\n",
+    "            \n",
+    "            print(f\"✅ Scaricati {len(df)} comuni!\")\n",
+    "            \n",
+    "            # Salva in cache\n",
+    "            self.comuni_df = df\n",
+    "            \n",
+    "            return df\n",
+    "            \n",
+    "        except Exception as e:\n",
+    "            print(f\"❌ Errore: {e}\")\n",
+    "            print(\"Proviamo con dati di backup locali...\")\n",
+    "            return self.get_backup_data()\n",
+    "    \n",
+    "    def get_backup_data(self) -> pd.DataFrame:\n",
+    "        \"\"\"Dati di backup per testing se ISTAT non risponde\"\"\"\n",
+    "        \n",
+    "        # Alcuni comuni di esempio per testing\n",
+    "        data = {\n",
+    "            'Codice Comune': ['058091', '058001', '058059'],\n",
+    "            'Denominazione': ['Roma', 'Albano Laziale', 'Marino'],\n",
+    "            'Provincia': ['Roma', 'Roma', 'Roma'],\n",
+    "            'Regione': ['Lazio', 'Lazio', 'Lazio'],\n",
+    "            'Popolazione_2023': [2872800, 41700, 43600]\n",
+    "        }\n",
+    "        \n",
+    "        df = pd.DataFrame(data)\n",
+    "        print(f\"📦 Caricati {len(df)} comuni di esempio\")\n",
+    "        return df\n",
+    "    \n",
+    "    def get_comuni_regione(self, regione: str = \"Lazio\", limit: int = 10) -> List[Dict]:\n",
+    "        \"\"\"\n",
+    "        Filtra i comuni per regione\n",
+    "        \n",
+    "        Args:\n",
+    "            regione: Nome della regione\n",
+    "            limit: Numero massimo di comuni\n",
+    "            \n",
+    "        Returns:\n",
+    "            Lista di dizionari con info sui comuni\n",
+    "        \"\"\"\n",
+    "        print(f\"\\n🔍 Cerco comuni del {regione}...\")\n",
+    "        \n",
+    "        if self.comuni_df is None:\n",
+    "            self.comuni_df = self.get_lista_comuni_csv()\n",
+    "        \n",
+    "        # Nomi delle colonne potrebbero variare, proviamo diverse opzioni\n",
+    "        col_regione = None\n",
+    "        col_comune = None\n",
+    "        col_provincia = None\n",
+    "        \n",
+    "        # Cerca le colonne giuste (ISTAT usa nomi in italiano)\n",
+    "        for col in self.comuni_df.columns:\n",
+    "            if 'Regione' in col or 'regione' in col:\n",
+    "                col_regione = col\n",
+    "            if 'Denominazione' in col or 'denominazione' in col or 'Comune' in col:\n",
+    "                col_comune = col\n",
+    "            if 'Provincia' in col or 'provincia' in col:\n",
+    "                col_provincia = col\n",
+    "        \n",
+    "        if not col_regione:\n",
+    "            # Usa dati di backup\n",
+    "            return self.get_backup_data().head(limit).to_dict('records')\n",
+    "        \n",
+    "        # Filtra per regione\n",
+    "        df_filtered = self.comuni_df[\n",
+    "            self.comuni_df[col_regione].str.contains(regione, case=False, na=False)\n",
+    "        ].head(limit)\n",
+    "        \n",
+    "        # Converti in lista di dizionari\n",
+    "        comuni = []\n",
+    "        for _, row in df_filtered.iterrows():\n",
+    "            comuni.append({\n",
+    "                'codice': row.get('Codice Comune', 'N/D'),\n",
+    "                'nome': row.get(col_comune, 'N/D'),\n",
+    "                'provincia': row.get(col_provincia, 'N/D'),\n",
+    "                'regione': row.get(col_regione, 'N/D')\n",
+    "            })\n",
+    "        \n",
+    "        print(f\"✅ Trovati {len(comuni)} comuni\")\n",
+    "        return comuni\n",
+    "\n",
+    "\n",
+    "class OpenDataCollector:\n",
+    "    \"\"\"Collector per dati da portali Open Data\"\"\"\n",
+    "    \n",
+    "    def get_bilanci_sample(self) -> Dict:\n",
+    "        \"\"\"\n",
+    "        Recupera dati di esempio sui bilanci comunali\n",
+    "        \n",
+    "        Returns:\n",
+    "            Dizionario con dati di bilancio di esempio\n",
+    "        \"\"\"\n",
+    "        print(\"\\n💰 Genero dati di bilancio di esempio...\")\n",
+    "        \n",
+    "        # Dati di esempio realistici per il POC\n",
+    "        bilanci = {\n",
+    "            \"Roma\": {\n",
+    "                \"anno\": 2023,\n",
+    "                \"entrate\": {\n",
+    "                    \"tributarie\": 1500000000,\n",
+    "                    \"trasferimenti\": 800000000,\n",
+    "                    \"extratributarie\": 300000000\n",
+    "                },\n",
+    "                \"spese\": {\n",
+    "                    \"correnti\": 2000000000,\n",
+    "                    \"investimenti\": 400000000,\n",
+    "                    \"rimborso_prestiti\": 100000000\n",
+    "                },\n",
+    "                \"popolazione\": 2872800,\n",
+    "                \"spesa_procapite\": 870\n",
+    "            },\n",
+    "            \"Albano Laziale\": {\n",
+    "                \"anno\": 2023,\n",
+    "                \"entrate\": {\n",
+    "                    \"tributarie\": 25000000,\n",
+    "                    \"trasferimenti\": 5000000,\n",
+    "                    \"extratributarie\": 3000000\n",
+    "                },\n",
+    "                \"spese\": {\n",
+    "                    \"correnti\": 28000000,\n",
+    "                    \"investimenti\": 3000000,\n",
+    "                    \"rimborso_prestiti\": 1000000\n",
+    "                },\n",
+    "                \"popolazione\": 41700,\n",
+    "                \"spesa_procapite\": 768\n",
+    "            },\n",
+    "            \"Marino\": {\n",
+    "                \"anno\": 2023,\n",
+    "                \"entrate\": {\n",
+    "                    \"tributarie\": 28000000,\n",
+    "                    \"trasferimenti\": 6000000,\n",
+    "                    \"extratributarie\": 4000000\n",
+    "                },\n",
+    "                \"spese\": {\n",
+    "                    \"correnti\": 30000000,\n",
+    "                    \"investimenti\": 5000000,\n",
+    "                    \"rimborso_prestiti\": 2000000\n",
+    "                },\n",
+    "                \"popolazione\": 43600,\n",
+    "                \"spesa_procapite\": 849\n",
+    "            }\n",
+    "        }\n",
+    "        \n",
+    "        print(\"✅ Dati di bilancio generati!\")\n",
+    "        return bilanci\n",
+    "\n",
+    "\n",
+    "def test_collectors():\n",
+    "    \"\"\"Test completo dei collector\"\"\"\n",
+    "    \n",
+    "    print(\"\\n\" + \"=\"*60)\n",
+    "    print(\"🧪 TEST COLLECTOR DATI COMUNI\")\n",
+    "    print(\"=\"*60)\n",
+    "    \n",
+    "    # Test 1: ISTAT Collector\n",
+    "    print(\"\\n📊 TEST 1: ISTAT Collector\")\n",
+    "    print(\"-\"*40)\n",
+    "    \n",
+    "    istat = IstatCollector()\n",
+    "    comuni = istat.get_comuni_regione(\"Lazio\", limit=5)\n",
+    "    \n",
+    "    if comuni:\n",
+    "        print(\"\\n🏛️ Comuni trovati:\")\n",
+    "        for comune in comuni:\n",
+    "            print(f\"  • {comune['nome']} ({comune['provincia']})\")\n",
+    "    \n",
+    "    # Test 2: Open Data Collector\n",
+    "    print(\"\\n📊 TEST 2: Bilanci di Esempio\")\n",
+    "    print(\"-\"*40)\n",
+    "    \n",
+    "    opendata = OpenDataCollector()\n",
+    "    bilanci = opendata.get_bilanci_sample()\n",
+    "    \n",
+    "    print(\"\\n💶 Bilanci comunali:\")\n",
+    "    for comune, dati in bilanci.items():\n",
+    "        print(f\"\\n  {comune}:\")\n",
+    "        print(f\"    • Popolazione: {dati['popolazione']:,}\")\n",
+    "        print(f\"    • Entrate totali: €{sum(dati['entrate'].values()):,.0f}\")\n",
+    "        print(f\"    • Spese totali: €{sum(dati['spese'].values()):,.0f}\")\n",
+    "        print(f\"    • Spesa pro-capite: €{dati['spesa_procapite']}\")\n",
+    "    \n",
+    "    # Salva i dati per analisi futura\n",
+    "    print(\"\\n💾 Salvataggio dati...\")\n",
+    "    \n",
+    "    import os\n",
+    "    os.makedirs(\"../data/raw/istat\", exist_ok=True)\n",
+    "    \n",
+    "    # Salva comuni\n",
+    "    with open(\"../data/raw/istat/comuni_test.json\", \"w\", encoding='utf-8') as f:\n",
+    "        json.dump(comuni, f, indent=2, ensure_ascii=False)\n",
+    "    \n",
+    "    # Salva bilanci\n",
+    "    with open(\"../data/raw/istat/bilanci_test.json\", \"w\", encoding='utf-8') as f:\n",
+    "        json.dump(bilanci, f, indent=2, ensure_ascii=False)\n",
+    "    \n",
+    "    print(\"✅ Dati salvati in data/raw/\")\n",
+    "    \n",
+    "    print(\"\\n\" + \"=\"*60)\n",
+    "    print(\"✅ TEST COMPLETATO CON SUCCESSO!\")\n",
+    "    print(\"=\"*60)\n",
+    "    \n",
+    "    return comuni, bilanci\n",
+    "\n",
+    "\n",
+    "if __name__ == \"__main__\":\n",
+    "    comuni, bilanci = test_collectors()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "0903def0",
+   "metadata": {},
+   "source": [
+    "# BDAP\n",
+    "La Banca Dati Amministrazioni Pubbliche è gestita dalla Ragioneria Generale dello Stato e fornisce dati della Finanza Pubblica con API CKAN per accedere al catalogo completo.\n",
+    "\n",
+    "BDAP utilizza CKAN (Comprehensive Knowledge Archive Network), una piattaforma open source per portali di open data. Le API CKAN permettono di accedere programmaticamente al catalogo completo dei dataset. BDAP offre anche OData API per accedere direttamente ai dati tabellari."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "id": "5062e03c",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "✅ Connessione OK! Trovati 3604 dataset\n",
+      "📁 Lista salvata in ..\\data\\raw\\bdap\\lista_dataset.json\n"
+     ]
+    }
+   ],
+   "source": [
+    "import requests\n",
+    "import json\n",
+    "import pandas as pd\n",
+    "from pathlib import Path\n",
+    "\n",
+    "# Setup cartelle\n",
+    "data_raw = Path('../data/raw/bdap')\n",
+    "data_raw.mkdir(parents=True, exist_ok=True)\n",
+    "\n",
+    "# Base URL per API CKAN di BDAP\n",
+    "BDAP_BASE = \"https://bdap-opendata.rgs.mef.gov.it/SpodCkanApi/api/3/action\"\n",
+    "\n",
+    "def test_bdap_connection():\n",
+    "    \"\"\"Test connessione base a BDAP\"\"\"\n",
+    "    try:\n",
+    "        # Prova a ottenere la lista dei dataset\n",
+    "        url = f\"{BDAP_BASE}/package_list\"\n",
+    "        response = requests.get(url)\n",
+    "        \n",
+    "        if response.status_code == 200:\n",
+    "            data = response.json()\n",
+    "            if data['success']:\n",
+    "                datasets = data['result']\n",
+    "                print(f\"✅ Connessione OK! Trovati {len(datasets)} dataset\")\n",
+    "                return datasets\n",
+    "            else:\n",
+    "                print(\"❌ Errore nella risposta API\")\n",
+    "                return None\n",
+    "        else:\n",
+    "            print(f\"❌ Errore HTTP {response.status_code}\")\n",
+    "            return None\n",
+    "    except Exception as e:\n",
+    "        print(f\"❌ Errore: {e}\")\n",
+    "        return None\n",
+    "\n",
+    "# Esegui test\n",
+    "datasets = test_bdap_connection()\n",
+    "\n",
+    "# Salva lista dataset\n",
+    "if datasets:\n",
+    "    with open(data_raw / 'lista_dataset.json', 'w') as f:\n",
+    "        json.dump(datasets, f, indent=2)\n",
+    "    print(f\"📁 Lista salvata in {data_raw / 'lista_dataset.json'}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "id": "c7d53e3c",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "✅ 'bilanci': 100 dataset trovati\n",
+      "✅ 'comuni': 39 dataset trovati\n",
+      "✅ 'enti locali': 100 dataset trovati\n",
+      "✅ 'armonizzati': 0 dataset trovati\n"
+     ]
+    }
+   ],
+   "source": [
+    "def search_bilanci_comuni():\n",
+    "    \"\"\"Cerca dataset relativi ai bilanci dei comuni\"\"\"\n",
+    "    try:\n",
+    "        url = f\"{BDAP_BASE}/package_search\"\n",
+    "        \n",
+    "        # Cerca dataset con parole chiave\n",
+    "        keywords = ['bilanci', 'comuni', 'enti locali', 'armonizzati']\n",
+    "        \n",
+    "        results = {}\n",
+    "        for keyword in keywords:\n",
+    "            params = {\n",
+    "                'q': keyword,\n",
+    "                'rows': 100  # Numero risultati\n",
+    "            }\n",
+    "            response = requests.get(url, params=params)\n",
+    "            \n",
+    "            if response.status_code == 200:\n",
+    "                data = response.json()\n",
+    "                if data['success']:\n",
+    "                    count = data['result']['count']\n",
+    "                    datasets = data['result']['results']\n",
+    "                    results[keyword] = {\n",
+    "                        'count': count,\n",
+    "                        'datasets': datasets\n",
+    "                    }\n",
+    "                    print(f\"✅ '{keyword}': {count} dataset trovati\")\n",
+    "        \n",
+    "        return results\n",
+    "    except Exception as e:\n",
+    "        print(f\"❌ Errore: {e}\")\n",
+    "        return None\n",
+    "\n",
+    "# Esegui ricerca\n",
+    "bilanci_results = search_bilanci_comuni()\n",
+    "\n",
+    "# Salva risultati\n",
+    "if bilanci_results:\n",
+    "    with open(data_raw / 'bilanci_search_results.json', 'w') as f:\n",
+    "        json.dump(bilanci_results, f, indent=2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "id": "93252224",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "✅ 'SIOPE': 50 dataset\n",
+      "✅ 'enti territoriali': 50 dataset\n",
+      "✅ 'spese enti locali': 50 dataset\n",
+      "✅ 'entrate enti locali': 50 dataset\n",
+      "\n",
+      "💾 Risultati salvati\n"
+     ]
+    }
+   ],
+   "source": [
+    "def search_enti_territoriali():\n",
+    "    \"\"\"Cerca con keyword più precise per enti locali\"\"\"\n",
+    "    BDAP_BASE = \"https://bdap-opendata.rgs.mef.gov.it/SpodCkanApi/api/3/action\"\n",
+    "    \n",
+    "    # Keyword più precise\n",
+    "    precise_keywords = [\n",
+    "        'SIOPE',\n",
+    "        'enti territoriali',\n",
+    "        'bilancio armonizzato',\n",
+    "        'rendiconto gestione',\n",
+    "        'spese enti locali',\n",
+    "        'entrate enti locali',\n",
+    "        'province comuni',\n",
+    "        'amministrazioni locali'\n",
+    "    ]\n",
+    "    \n",
+    "    all_results = {}\n",
+    "    \n",
+    "    for keyword in precise_keywords:\n",
+    "        params = {\n",
+    "            'q': keyword,\n",
+    "            'rows': 50,\n",
+    "            'sort': 'metadata_modified desc'\n",
+    "        }\n",
+    "        \n",
+    "        try:\n",
+    "            response = requests.get(f\"{BDAP_BASE}/package_search\", params=params)\n",
+    "            \n",
+    "            if response.status_code == 200:\n",
+    "                data = response.json()\n",
+    "                if data['success']:\n",
+    "                    count = data['result']['count']\n",
+    "                    \n",
+    "                    if count > 0:\n",
+    "                        all_results[keyword] = {\n",
+    "                            'count': count,\n",
+    "                            'datasets': data['result']['results'][:10]  # Prime 10\n",
+    "                        }\n",
+    "                        print(f\"✅ '{keyword}': {count} dataset\")\n",
+    "        except Exception as e:\n",
+    "            print(f\"❌ Errore con '{keyword}': {e}\")\n",
+    "    \n",
+    "    return all_results\n",
+    "\n",
+    "# Esegui ricerca\n",
+    "precise_results = search_enti_territoriali()\n",
+    "\n",
+    "# Salva\n",
+    "if precise_results:\n",
+    "    with open(data_raw / 'enti_territoriali_search.json', 'w', encoding='utf-8') as f:\n",
+    "        json.dump(precise_results, f, indent=2, ensure_ascii=False)\n",
+    "    \n",
+    "    print(f\"\\n💾 Risultati salvati\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "id": "6c0e8cfb",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "📊 Analisi dei 100 dataset 'enti locali'\n",
+      "\n",
+      "================================================================================\n",
+      "\n",
+      "1. 2023 - Mutui Concessi - Indagine campionaria sui mutui contratti dagli enti territoriali\n",
+      "   ID: spd_mut_spe_con_mtcon_01_2023\n",
+      "\n",
+      "2. 2017 - Rate di Ammortamento - Indagine campionaria sui mutui contratti dagli enti territoriali\n",
+      "   ID: spd_mut_spe_amm_mtamm_01_2017\n",
+      "\n",
+      "3. 2014 - Piemonte - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: 2014_piemonte_gestione_finanziaria_spese_enti_locali\n",
+      "   🎯 Keyword trovate: ['spese']\n",
+      "\n",
+      "4. 2015 - Campania - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg15_01_2015\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "5. 2015 - Marche - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: spd_rnd_spe_ael_reg11_01_2015\n",
+      "   🎯 Keyword trovate: ['spese']\n",
+      "\n",
+      "6. 2013 - Emilia-Romagna - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: spd_rnd_spe_ael_reg08_01_2013\n",
+      "   🎯 Keyword trovate: ['spese']\n",
+      "\n",
+      "7. 2015 - Campania - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: spd_rnd_spe_ael_reg15_01_2015\n",
+      "   🎯 Keyword trovate: ['spese']\n",
+      "\n",
+      "8. 2013 - Calabria - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg18_01_2013\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "9. 2016 - Debito Residuo al 01/01/anno successivo - Indagine campionaria sui mutui contratti dagli enti territoriali\n",
+      "   ID: spd_mut_spe_deb_mtdeb_01_2016\n",
+      "\n",
+      "10. 2015 - Trentino-Alto Adige - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg04_01_2015\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "11. 2013 - Calabria - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: spd_rnd_spe_ael_reg18_01_2013\n",
+      "   🎯 Keyword trovate: ['spese']\n",
+      "\n",
+      "12. 2013 - Valle d'Aosta - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg02_01_2013\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "13. 2014 - Lazio - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg12_01_2014\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "14. 2014 - Valle d'Aosta - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: spd_rnd_spe_ael_reg02_01_2014\n",
+      "   🎯 Keyword trovate: ['spese']\n",
+      "\n",
+      "15. 2014 - Gestione Patrimoniale Conto del Patrimonio Enti Locali\n",
+      "   ID: spd_rnd_csp_ael_gfcsp_01_2014\n",
+      "\n",
+      "16. 2014 - Molise - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg14_01_2014\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "17. 2018 - Debito Residuo al 01/01/anno successivo - Indagine campionaria sui mutui contratti dagli enti territoriali\n",
+      "   ID: spd_mut_spe_deb_mtdeb_01_2018\n",
+      "\n",
+      "18. 2014 - Puglia - Gestione finanziaria Entrate Enti Locali\n",
+      "   ID: spd_rnd_ent_ael_reg16_01_2014\n",
+      "   🎯 Keyword trovate: ['entrate']\n",
+      "\n",
+      "19. 2014 - Gestione finanziaria Residui passivi Enti Locali\n",
+      "   ID: spd_rnd_spe_arp_gfarp_01_2014\n",
+      "\n",
+      "20. 2015 - Piemonte - Gestione finanziaria Spese Enti Locali\n",
+      "   ID: 2015_piemonte_gestione_finanziaria_spese_enti_locali\n",
+      "   🎯 Keyword trovate: ['spese']\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Analizza i 100 dataset \"enti locali\"\n",
+    "enti_locali_datasets = bilanci_results['enti locali']['datasets']\n",
+    "\n",
+    "print(f\"\\n📊 Analisi dei {len(enti_locali_datasets)} dataset 'enti locali'\\n\")\n",
+    "print(\"=\"*80)\n",
+    "\n",
+    "# Mostra i primi 20 per vedere cosa contengono\n",
+    "for i, ds in enumerate(enti_locali_datasets[:20]):\n",
+    "    title = ds.get('title', '')\n",
+    "    print(f\"\\n{i+1}. {title}\")\n",
+    "    print(f\"   ID: {ds.get('name')}\")\n",
+    "    \n",
+    "    # Cerca keyword di bilanci\n",
+    "    keywords_check = ['bilanci', 'entrate', 'spese', 'siope', 'finanziario', 'contabilità', 'rendiconto']\n",
+    "    title_lower = title.lower()\n",
+    "    \n",
+    "    matching_keywords = [kw for kw in keywords_check if kw in title_lower]\n",
+    "    if matching_keywords:\n",
+    "        print(f\"   🎯 Keyword trovate: {matching_keywords}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "id": "3c40f917",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "✅ 'SIOPE': 100 dataset\n",
+      "✅ 'SIOPE+': 100 dataset\n",
+      "✅ 'incassi pagamenti': 0 dataset\n",
+      "✅ 'flussi cassa enti': 0 dataset\n",
+      "✅ 'tesoreria enti': 0 dataset\n",
+      "\n",
+      "📊 Totale dataset SIOPE unici: 174\n",
+      "\n",
+      "Prime 15 risultati SIOPE:\n",
+      "================================================================================\n",
+      "\n",
+      "1. 2018 - Emilia-Romagna - SIOPE Movimenti mensili delle disponibilità liquide\n",
+      "   ID: spd_rnd_liq_sio_reg08_01_2018\n",
+      "   Aggiornato: 2022-02-10\n",
+      "\n",
+      "2. 2020 - Lazio - SIOPE Movimenti cumulati mensili di Spesa\n",
+      "   ID: spd_rnd_spe_sio_reg12_01_2020\n",
+      "   Aggiornato: 2022-02-14\n",
+      "\n",
+      "3. 2021 - Trentino-Alto Adige - SIOPE Movimenti cumulati mensili di Spesa\n",
+      "   ID: spd_rnd_spe_sio_reg04_01_2021\n",
+      "   Aggiornato: 2022-02-14\n",
+      "\n",
+      "4. 2016 - Valle D'Aosta - SIOPE Movimenti cumulati mensili di Entrata\n",
+      "   ID: spd_rnd_ent_sio_reg02_01_2016\n",
+      "   Aggiornato: 2022-01-28\n",
+      "\n",
+      "5. 2022 - Trentino-Alto Adige - SIOPE Movimenti mensili delle disponibilità liquide\n",
+      "   ID: spd_rnd_liq_sio_reg04_01_2022\n",
+      "   Aggiornato: 2023-10-23\n",
+      "\n",
+      "6. 2019 - Friuli-Venezia Giulia - SIOPE Movimenti mensili delle disponibilità liquide\n",
+      "   ID: spd_rnd_liq_sio_reg06_01_2019\n",
+      "   Aggiornato: 2022-02-11\n",
+      "\n",
+      "7. 2023 - Sicilia - SIOPE Movimenti cumulati mensili di Spesa\n",
+      "   ID: spd_rnd_spe_sio_reg19_01_2023\n",
+      "   Aggiornato: 2024-07-23\n",
+      "\n",
+      "8. 2017 - Basilicata - SIOPE Movimenti cumulati mensili di Entrata\n",
+      "   ID: spd_rnd_ent_sio_reg17_01_2017\n",
+      "   Aggiornato: 2022-02-08\n",
+      "\n",
+      "9. 2024 - Sardegna - SIOPE Movimenti cumulati mensili di Entrata\n",
+      "   ID: spd_rnd_ent_sio_reg20_01_2024\n",
+      "   Aggiornato: 2025-01-23\n",
+      "\n",
+      "10. 2023 - Calabria - SIOPE Movimenti cumulati mensili di Entrata\n",
+      "   ID: spd_rnd_ent_sio_reg18_01_2023\n",
+      "   Aggiornato: 2024-07-23\n",
+      "\n",
+      "11. 2022 - Abruzzo - SIOPE Movimenti mensili delle disponibilità liquide\n",
+      "   ID: spd_rnd_liq_sio_reg13_01_2022\n",
+      "   Aggiornato: 2023-10-23\n",
+      "\n",
+      "12. 2016 - Emilia-Romagna - SIOPE Movimenti mensili delle disponibilità liquide\n",
+      "   ID: spd_rnd_liq_sio_reg08_01_2016\n",
+      "   Aggiornato: 2022-01-28\n",
+      "\n",
+      "13. 2017 - Abruzzo - SIOPE Movimenti cumulati mensili di Spesa\n",
+      "   ID: spd_rnd_spe_sio_reg13_01_2017\n",
+      "   Aggiornato: 2022-02-08\n",
+      "\n",
+      "14. 2024 - Liguria - SIOPE Movimenti cumulati mensili di Spesa\n",
+      "   ID: spd_rnd_spe_sio_reg07_01_2024\n",
+      "   Aggiornato: 2025-01-23\n",
+      "\n",
+      "15. 2019 - Lazio - SIOPE Movimenti cumulati mensili di Spesa\n",
+      "   ID: spd_rnd_spe_sio_reg12_01_2019\n",
+      "   Aggiornato: 2022-02-11\n"
+     ]
+    }
+   ],
+   "source": [
+    "def deep_search_siope():\n",
+    "    \"\"\"Ricerca approfondita per dataset SIOPE\"\"\"\n",
+    "    BDAP_BASE = \"https://bdap-opendata.rgs.mef.gov.it/SpodCkanApi/api/3/action\"\n",
+    "    \n",
+    "    # Varie combinazioni SIOPE\n",
+    "    siope_searches = [\n",
+    "        'SIOPE',\n",
+    "        'SIOPE+',\n",
+    "        'incassi pagamenti',\n",
+    "        'flussi cassa enti',\n",
+    "        'tesoreria enti'\n",
+    "    ]\n",
+    "    \n",
+    "    all_siope = []\n",
+    "    \n",
+    "    for search_term in siope_searches:\n",
+    "        params = {\n",
+    "            'q': search_term,\n",
+    "            'rows': 100\n",
+    "        }\n",
+    "        \n",
+    "        try:\n",
+    "            response = requests.get(f\"{BDAP_BASE}/package_search\", params=params)\n",
+    "            \n",
+    "            if response.status_code == 200:\n",
+    "                data = response.json()\n",
+    "                if data['success']:\n",
+    "                    datasets = data['result']['results']\n",
+    "                    count = data['result']['count']\n",
+    "                    \n",
+    "                    print(f\"✅ '{search_term}': {count} dataset\")\n",
+    "                    \n",
+    "                    for ds in datasets:\n",
+    "                        if ds not in all_siope:\n",
+    "                            all_siope.append(ds)\n",
+    "        except Exception as e:\n",
+    "            print(f\"❌ Errore: {e}\")\n",
+    "    \n",
+    "    print(f\"\\n📊 Totale dataset SIOPE unici: {len(all_siope)}\\n\")\n",
+    "    \n",
+    "    # Mostra i primi 15\n",
+    "    print(\"Prime 15 risultati SIOPE:\")\n",
+    "    print(\"=\"*80)\n",
+    "    \n",
+    "    for i, ds in enumerate(all_siope[:15]):\n",
+    "        print(f\"\\n{i+1}. {ds.get('title')}\")\n",
+    "        print(f\"   ID: {ds.get('name')}\")\n",
+    "        print(f\"   Aggiornato: {ds.get('metadata_modified', 'N/A')[:10]}\")\n",
+    "    \n",
+    "    return all_siope\n",
+    "\n",
+    "# Cerca SIOPE\n",
+    "siope_results = deep_search_siope()\n",
+    "\n",
+    "# Salva\n",
+    "if siope_results:\n",
+    "    with open(data_raw / 'siope_all_datasets.json', 'w', encoding='utf-8') as f:\n",
+    "        json.dump(siope_results, f, indent=2, ensure_ascii=False)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "08c63ca5",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "markdown",
+   "id": "7efc884d",
+   "metadata": {},
+   "source": [
+    "# OpenBilanci\n",
+    "è la fonte più accessibile e user-friendly, gestita da Openpolis, contiene i bilanci armonizzati degli ultimi 15 anni per tutti i comuni italiani in formato open data.\n",
+    "\n",
+    "Non esiste un'API pubblica quindi andrebbe fatto scraping, il robots.txt sembra accettare tutto ma va controllata la licenza (Creative Commons BY-NC-SA 4.0.), in ogni caso non è una finalità commerciale quindi non dovrebbero esserci problemi, ma prima di procedere con lo scraping siccome si basano su BDAP, conviene occuparsi prima di quella."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "1841c412",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "❌ Errore: HTTPSConnectionPool(host='openbilanci.it', port=443): Max retries exceeded with url: /api//comune/015146 (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1016)')))\n",
+      "❌ Errore: HTTPSConnectionPool(host='openbilanci.it', port=443): Max retries exceeded with url: /api//comune/016024 (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1016)')))\n",
+      "❌ Errore: HTTPSConnectionPool(host='openbilanci.it', port=443): Max retries exceeded with url: /api//comune/013075 (Caused by SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1016)')))\n"
+     ]
+    }
+   ],
+   "source": [
+    "import requests\n",
+    "import pandas as pd\n",
+    "import json\n",
+    "from pathlib import Path\n",
+    "\n",
+    "# Configura cartelle\n",
+    "data_raw = Path('data/raw')\n",
+    "data_raw.mkdir(parents=True, exist_ok=True)\n",
+    "\n",
+    "# Comuni di test\n",
+    "comuni_test = [\n",
+    "    {'nome': 'Milano', 'codice': '015146'},\n",
+    "    {'nome': 'Bergamo', 'codice': '016024'},\n",
+    "    {'nome': 'Crema', 'codice': '013075'}\n",
+    "]\n",
+    "\n",
+    "# Test OpenBilanci\n",
+    "# Nota: dovrai trovare l'endpoint corretto sul loro sito\n",
+    "base_url = \"https://openbilanci.it/api/\"  # URL da verificare\n",
+    "\n",
+    "for comune in comuni_test:\n",
+    "    try:\n",
+    "        # Esempio di chiamata (da adattare)\n",
+    "        response = requests.get(f\"{base_url}/comune/{comune['codice']}\")\n",
+    "        \n",
+    "        if response.status_code == 200:\n",
+    "            data = response.json()\n",
+    "            # Salva raw data\n",
+    "            filepath = data_raw / f\"{comune['nome']}_raw.json\"\n",
+    "            with open(filepath, 'w') as f:\n",
+    "                json.dump(data, f, indent=2)\n",
+    "            print(f\"✅ Scaricati dati per {comune['nome']}\")\n",
+    "        else:\n",
+    "            print(f\"❌ Errore {response.status_code} per {comune['nome']}\")\n",
+    "    except Exception as e:\n",
+    "        print(f\"❌ Errore: {e}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "47f58422",
+   "metadata": {},
+   "source": [
+    "# IOPE+ \n",
+    "offre dati su incassi e pagamenti delle PA, con prospetti per singolo ente, aggregati geografici/demografici e funzionalità di confronto."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "335a5709",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "trasparenza",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.14"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
+
+
+
+================================================================================
+FILE: README.md
+================================================================================
+
+# 🏛️ Trasparenza Comuni
+
+Monitor civico digitale per la trasparenza economico-finanziaria dei comuni italiani.
+
+## 🎯 Obiettivi
+
+- Rendere trasparente e accessibile la gestione economico-finanziaria dei comuni
+- Visualizzare costi, entrate e spese con dashboard user-friendly
+- Evidenziare virtuosità, sprechi e anomalie
+- Favorire il controllo sociale e la consapevolezza civica
+
+## 🚀 Quick Start
+
+### Prerequisiti
+- Python 3.11+
+- PostgreSQL 15+
+- Git
+
+### Installazione
+```bash
+# Clona il repository
+git clone https://github.com/TUO_USERNAME/trasparenza-comuni.git
+cd trasparenza-comuni
+
+# Crea ambiente virtuale
+python -m venv venv
+
+# Attiva ambiente (Windows)
+venv\Scripts\activate
+
+# Attiva ambiente (Linux/Mac)
+source venv/bin/activate
+
+# Installa dipendenze
+pip install -r requirements.txt
+```
+
+## 📁 Struttura Progetto
+```
+trasparenza-comuni/
+├── src/
+│   ├── api/            # FastAPI backend
+│   ├── collectors/     # Data collectors per API pubbliche
+│   ├── database/       # Modelli e gestione DB
+│   ├── analysis/       # Analisi e AI
+│   └── utils/          # Utility functions
+├── data/
+│   ├── raw/           # Dati grezzi scaricati
+│   └── processed/     # Dati elaborati
+├── notebooks/         # Jupyter notebooks per analisi
+├── tests/            # Test suite
+├── docs/             # Documentazione
+└── config/           # File di configurazione
+```
+
+## 🤝 Contributing
+
+Progetto open source - contribuzioni benvenute!
+
+## 📝 Licenza
+
+MIT License - Vedi [LICENSE](LICENSE) per dettagli
+
+
+================================================================================
+FILE: requirements-dev.txt
+================================================================================
+
+
+
+
+================================================================================
+FILE: requirements.txt
+================================================================================
+
+# Core
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+python-dotenv==1.0.0
+
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.12.1
+
+# Data Processing
+pandas==2.1.3
+numpy==1.26.2
+requests==2.31.0
+
+# Scheduling
+apscheduler==3.10.4
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+
+# Utilities
+python-dateutil==2.8.2
+pyyaml==6.0.1
+
+
+================================================================================
+FILE: src\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE: src\analysis\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE: src\api\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE: src\collectors\__init__.py
+================================================================================
+
+
+
+
+================================================================================
+FILE: src\collectors\bdap_collector.py
+================================================================================
+
+"""
+Collector per i dati BDAP (Banca Dati Amministrazioni Pubbliche)
+Recupera i bilanci dei comuni italiani
+"""
+import requests
+import pandas as pd
+from typing import Dict, List, Optional
+import json
+from datetime import datetime
+
+class BDAPCollector:
+    """Raccoglie dati dalla BDAP del MEF"""
+    
+    BASE_URL = "https://bdap-opendata.mef.gov.it/api/v1"
+    
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Trasparenza-Comuni/1.0'
+        })
+    
+    def test_connection(self) -> bool:
+        """Testa la connessione alle API BDAP"""
+        try:
+            response = self.session.get(f"{self.BASE_URL}/public/elenco_amministrazioni")
+            return response.status_code == 200
+        except Exception as e:
+            print(f"❌ Errore connessione: {e}")
+            return False
+    
+    def get_lista_comuni(self, regione: str = "LAZIO", limit: int = 5) -> List[Dict]:
+        """
+        Ottiene la lista dei comuni di una regione
+        
+        Args:
+            regione: Nome della regione (es. "LAZIO")
+            limit: Numero massimo di comuni da recuperare
+        
+        Returns:
+            Lista di dizionari con info sui comuni
+        """
+        print(f"📍 Recupero comuni del {regione}...")
+        
+        # Endpoint per l'elenco amministrazioni
+        url = f"{self.BASE_URL}/public/elenco_amministrazioni"
+        
+        try:
+            response = self.session.get(url)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # Filtra solo i comuni della regione specificata
+            comuni = []
+            for ente in data.get('data', []):
+                if (ente.get('tipo_ente') == 'COMUNE' and 
+                    ente.get('regione', '').upper() == regione.upper()):
+                    comuni.append({
+                        'codice': ente.get('codice_ente'),
+                        'nome': ente.get('denominazione'),
+                        'provincia': ente.get('provincia'),
+                        'regione': ente.get('regione'),
+                        'popolazione': ente.get('popolazione', 0)
+                    })
+                    
+                    if len(comuni) >= limit:
+                        break
+            
+            print(f"✅ Trovati {len(comuni)} comuni")
+            return comuni
+            
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Errore nel recupero dati: {e}")
+            return []
+    
+    def get_bilancio_comune(self, codice_comune: str, anno: int = 2022) -> Dict:
+        """
+        Recupera il bilancio di un comune per un anno specifico
+        
+        Args:
+            codice_comune: Codice del comune
+            anno: Anno di riferimento
+            
+        Returns:
+            Dizionario con i dati di bilancio
+        """
+        print(f"💰 Recupero bilancio {codice_comune} per l'anno {anno}...")
+        
+        # Nota: questo è un esempio - l'endpoint reale potrebbe essere diverso
+        url = f"{self.BASE_URL}/public/bilanci/{codice_comune}/{anno}"
+        
+        try:
+            response = self.session.get(url)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"⚠️ Nessun dato per {codice_comune} anno {anno}")
+                return {}
+        except Exception as e:
+            print(f"❌ Errore: {e}")
+            return {}
+
+
+def test_bdap():
+    """Funzione di test per il collector BDAP"""
+    print("\n" + "="*50)
+    print("🧪 TEST COLLECTOR BDAP")
+    print("="*50 + "\n")
+    
+    # Inizializza il collector
+    collector = BDAPCollector()
+    
+    # Test 1: Connessione
+    print("Test 1: Verifica connessione...")
+    if collector.test_connection():
+        print("✅ Connessione OK!\n")
+    else:
+        print("❌ Connessione fallita\n")
+        return
+    
+    # Test 2: Lista comuni
+    print("Test 2: Recupero 3 comuni del Lazio...")
+    comuni = collector.get_lista_comuni("LAZIO", limit=3)
+    
+    if comuni:
+        print("\n📊 Comuni trovati:")
+        for comune in comuni:
+            print(f"  - {comune['nome']} ({comune['provincia']})")
+            print(f"    Codice: {comune['codice']}")
+            print(f"    Popolazione: {comune.get('popolazione', 'N/D')}")
+    
+    # Test 3: Salva i dati
+    if comuni:
+        print("\n💾 Salvo i dati in data/raw/test_comuni.json")
+        
+        # Assicurati che la cartella esista
+        import os
+        os.makedirs("data/raw", exist_ok=True)
+        
+        with open("data/raw/test_comuni.json", "w", encoding='utf-8') as f:
+            json.dump(comuni, f, indent=2, ensure_ascii=False)
+        
+        print("✅ Dati salvati!")
+    
+    print("\n" + "="*50)
+    print("✅ TEST COMPLETATO")
+    print("="*50)
+
+
+if __name__ == "__main__":
+    test_bdap()
+

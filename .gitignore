@@ -56,3 +56,5 @@ build/
 # Aggiungi queste righe al .gitignore
 .vscode/*
 !.vscode/settings.json
+# Dump del codice di _local/snapshot.py
+snapshot_*.txt

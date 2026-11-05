@@ -53,8 +53,13 @@ dist/
 build/
 *.egg-info/
 
-# Aggiungi queste righe al .gitignore
-.vscode/*
-!.vscode/settings.json
 # Dump del codice di _local/snapshot.py
 snapshot_*.txt
+
+# Documenti privati (lista bianca)
+/*.md
+!/README.md
+!/CHANGELOG.md
+CLAUDE.md
+_local/
+.claude/

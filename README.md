@@ -1,62 +1,40 @@
-# 🏛️ Trasparenza Comuni
+# Trasparenza Comuni
 
 Monitor civico digitale per la trasparenza economico-finanziaria dei comuni italiani.
 
-## 🎯 Obiettivi
+Stato: fase esplorativa, in pausa. Ci sono un collector BDAP/SIOPE e due notebook di prova
+sulle fonti; nessuna dashboard.
+
+## Obiettivi
 
 - Rendere trasparente e accessibile la gestione economico-finanziaria dei comuni
 - Visualizzare costi, entrate e spese con dashboard user-friendly
 - Evidenziare virtuosità, sprechi e anomalie
 - Favorire il controllo sociale e la consapevolezza civica
 
-## 🚀 Quick Start
+## Installazione
 
-### Prerequisiti
-- Python 3.11+
-- PostgreSQL 15+
-- Git
+Prerequisiti: Python 3.11+, Miniconda (o Anaconda), Git.
 
-### Installazione
 ```bash
-# Clona il repository
-git clone https://github.com/TUO_USERNAME/trasparenza-comuni.git
+git clone https://github.com/AlbGri/trasparenza-comuni.git
 cd trasparenza-comuni
-
-# Crea ambiente virtuale
-python -m venv venv
-
-# Attiva ambiente (Windows)
-venv\Scripts\activate
-
-# Attiva ambiente (Linux/Mac)
-source venv/bin/activate
-
-# Installa dipendenze
+conda create -n trasparenza python=3.11 -y
+conda activate trasparenza
 pip install -r requirements.txt
 ```
 
-## 📁 Struttura Progetto
+## Struttura
+
 ```
 trasparenza-comuni/
 ├── src/
-│   ├── api/            # FastAPI backend
-│   ├── collectors/     # Data collectors per API pubbliche
-│   ├── database/       # Modelli e gestione DB
-│   ├── analysis/       # Analisi e AI
-│   └── utils/          # Utility functions
-├── data/
-│   ├── raw/           # Dati grezzi scaricati
-│   └── processed/     # Dati elaborati
-├── notebooks/         # Jupyter notebooks per analisi
-├── tests/            # Test suite
-├── docs/             # Documentazione
-└── config/           # File di configurazione
+│   ├── main.py         # FastAPI, endpoint / e /health
+│   └── collectors/     # Download dei dati BDAP/SIOPE
+├── notebooks/          # Esplorazione delle fonti (BDAP, SIOPE, OpenBilanci, dati.gov.it, ...)
+└── data/               # Dati scaricati, non versionati
 ```
 
-## 🤝 Contributing
+## Licenza
 
-Progetto open source - contribuzioni benvenute!
-
-## 📝 Licenza
-
-MIT License - Vedi [LICENSE](LICENSE) per dettagli
+[AGPL-3.0](LICENSE)

@@ -6,7 +6,7 @@ import time
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, Callable
 
 import pandas as pd
 import requests
@@ -45,6 +45,35 @@ def richiesta(sessione: requests.Session, url: str, **opzioni) -> requests.Respo
             log.warning("tentativo %d fallito su %s: %s", tentativo, url, errore)
             time.sleep(5 * tentativo)
     raise requests.RequestException(f"la fonte non risponde: {url} ({errore})")
+
+
+def esiste(sessione: requests.Session, url: str) -> bool:
+    """Vero se la fonte serve il file, falso se risponde 404."""
+    try:
+        richiesta(sessione, url, headers={"Range": "bytes=0-0"}, stream=True).close()
+    except requests.HTTPError as errore:
+        if errore.response is not None and errore.response.status_code == 404:
+            return False
+        raise
+    return True
+
+
+def anni_pubblicati(
+    primo: int, url_anno: Callable[[int], str], sessione: requests.Session
+) -> range:
+    """Anni consecutivi da `primo` per cui la fonte ha il file.
+
+    Si prova l'anno dopo l'ultimo trovato finche' il file non esiste.
+
+    Raises:
+        ValueError: se non esiste nemmeno il file del primo anno.
+    """
+    anno = primo
+    while esiste(sessione, url_anno(anno)):
+        anno += 1
+    if anno == primo:
+        raise ValueError(f"la fonte non ha il file del {primo}: {url_anno(primo)}")
+    return range(primo, anno)
 
 
 class FileRemoto(io.RawIOBase):

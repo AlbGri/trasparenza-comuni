@@ -4,8 +4,9 @@ Osservatorio civico sui bilanci dei comuni italiani: quanto spende ogni comune, 
 servizi, e come si colloca rispetto ai comuni simili.
 
 Stato: in costruzione. La pipeline produce le tabelle di base (anagrafica dei comuni, rendiconti
-2016-2025, popolazione); indicatori, confronti e sito sono i prossimi passi. Non c'è ancora un
-sito pubblicato.
+2016-2025, popolazione) e i confronti fra comuni simili (pro capite, mediane, posizioni);
+indicatori ufficiali, esportazione e sito sono i prossimi passi. Non c'è ancora un sito
+pubblicato.
 
 ## Obiettivi
 
@@ -49,24 +50,36 @@ python -m pipeline      # scarica le fonti e scrive le tabelle Parquet in data/p
 python -m pytest        # prove automatiche
 ```
 
-Il primo lancio scarica i dati di dieci anni e dura circa cinque minuti. I lanci successivi
-riscaricano solo ciò che alla fonte è cambiato: senza novità finiscono in pochi secondi. Si può
-lanciare un solo passo (`rendiconti`, `anagrafica`, `popolazione`) e limitare gli anni dei
+Il primo lancio scarica tutti gli anni pubblicati da OpenBDAP e dura circa sei minuti. I lanci
+successivi riscaricano e ricalcolano solo ciò che alla fonte è cambiato. Si può lanciare un solo
+passo (`rendiconti`, `anagrafica`, `popolazione`, `confronti`) e limitare gli anni dei
 rendiconti, per esempio `python -m pipeline rendiconti --anni 2024`.
+
+A fine lancio la pipeline confronta i numeri di controllo degli anni chiusi (comuni, impegni,
+spesa corrente, residenti, mediane) con quelli attesi in `pipeline/controlli_attesi.csv` ed esce
+con un errore se uno non torna.
 
 Tabelle prodotte, tutte per i soli comuni:
 
 | Tabella | Contenuto | Fonte |
 |---|---|---|
-| `enti` | codice fiscale, codice ISTAT, nome, provincia, regione, stato (attivo o estinto), successore | OpenBDAP, IndicePA, ISTAT |
-| `consegne` | rendiconto presente o no, per ente e anno | OpenBDAP |
+| `enti` | codice fiscale, codice ISTAT (quello storico per i comuni estinti), nome, provincia, regione, stato (attivo o estinto), data di nascita e di cessazione, successore | OpenBDAP, IndicePA, ISTAT |
+| `consegne` | per ente e anno: consegnato, non consegnato, non esisteva | OpenBDAP, ISTAT |
 | `spese` | impegni, pagamenti e previsioni per missione, programma e titolo | OpenBDAP |
 | `entrate` | accertamenti e riscossioni per titolo e tipologia | OpenBDAP |
 | `risultato` | voci del risultato di amministrazione | OpenBDAP |
 | `indicatori_ufficiali` | i 55 indicatori certificati dal comune | OpenBDAP |
 | `parametri` | parametri di deficitarietà, dal 2019 | OpenBDAP |
 | `popolazione` | residenti al 1 gennaio dell'anno successivo a quello di bilancio | ISTAT |
+| `gruppi` | gruppo di comuni simili di ogni comune, anno per anno: fascia di abitanti e area | pipeline |
+| `dimensione_gruppi` | comuni di ogni gruppo, con quanti hanno e non hanno il rendiconto | pipeline |
+| `procapite` | spesa ed entrate pro capite per titolo, missione e programma, con la posizione nel gruppo | pipeline |
+| `confronti` | mediana e percentili di ogni gruppo, voce per voce | pipeline |
 | `versioni_fonti` | versione e data di ogni file scaricato | pipeline |
+
+I gruppi uniscono comuni della stessa fascia di abitanti (sei fasce) e della stessa area: le
+regioni ordinarie in quattro aree, ogni regione a statuto speciale a sé. Un gruppo con meno di
+20 comuni si allarga alle regioni dello stesso tipo, poi a tutta Italia, e lo dichiara.
 
 In `spese` ed `entrate` la colonna `esclusa` segna partite di giro e anticipazioni di cassa, che
 non sono spesa né entrata vera. Gli impegni (competenza) e i pagamenti (cassa) sono misure

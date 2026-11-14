@@ -1,17 +1,20 @@
 """Comando della pipeline: `python -m pipeline [passi] [--anni 2016-2025]`.
 
-Senza argomenti esegue tutti i passi. Un passo salta cio' che alla fonte non e' cambiato.
+Senza argomenti esegue tutti i passi. Un passo salta cio' che alla fonte non e' cambiato. A
+fine lancio confronta i numeri di controllo con quelli attesi; se uno non torna esce con
+codice 1.
 """
 import argparse
 import logging
+import sys
 
-from pipeline import anagrafica, popolazione, rendiconti
-from pipeline.fonti import ANNI
-from pipeline.scarico import Registro, nuova_sessione
+from pipeline import anagrafica, confronti, controlli, popolazione, rendiconti
+from pipeline.fonti import PRIMO_ANNO, url_rendiconto
+from pipeline.scarico import Registro, anni_pubblicati, nuova_sessione
 
 log = logging.getLogger("pipeline")
 
-PASSI = ["rendiconti", "anagrafica", "popolazione"]
+PASSI = ["rendiconti", "anagrafica", "popolazione", "confronti"]
 
 
 def _anni(testo: str) -> range:
@@ -26,8 +29,8 @@ def main() -> None:
     parser.add_argument(
         "--anni",
         type=_anni,
-        default=ANNI,
-        help="anni dei rendiconti da aggiornare: uno solo o un intervallo, es. 2016-2025",
+        help="anni dei rendiconti da aggiornare: uno solo o un intervallo, es. 2016-2025 "
+        "(senza, tutti quelli pubblicati da OpenBDAP)",
     )
     argomenti = parser.parse_args()
     if sconosciuti := set(argomenti.passi) - set(PASSI):
@@ -38,7 +41,11 @@ def main() -> None:
 
     convertiti = 0
     if "rendiconti" in argomenti.passi:
-        convertiti = rendiconti.aggiorna(argomenti.anni, registro, sessione)
+        anni = argomenti.anni or anni_pubblicati(
+            PRIMO_ANNO, lambda anno: url_rendiconto(anno, "Schemi di bilancio"), sessione
+        )
+        log.info("rendiconti: anni %d-%d", anni[0], anni[-1])
+        convertiti = rendiconti.aggiorna(anni, registro, sessione)
         log.info("rendiconti: %d file scaricati e convertiti", convertiti)
     if "anagrafica" in argomenti.passi:
         riscritta = anagrafica.aggiorna(registro, sessione, forza=convertiti > 0)
@@ -46,6 +53,11 @@ def main() -> None:
     if "popolazione" in argomenti.passi:
         riscritta = popolazione.aggiorna(registro, sessione)
         log.info("popolazione: %s", "riscritta" if riscritta else "invariata")
+    if "confronti" in argomenti.passi:
+        riscritti = confronti.aggiorna()
+        log.info("confronti: %s", "ricalcolati" if riscritti else "invariati")
+    if not controlli.esegui():
+        sys.exit(1)
 
 
 if __name__ == "__main__":

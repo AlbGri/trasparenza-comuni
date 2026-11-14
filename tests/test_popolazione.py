@@ -1,7 +1,9 @@
 """Lettura dei file ISTAT della popolazione."""
 import zipfile
 
-from pipeline.popolazione import leggi_posas, leggi_ricostruzione
+import pandas as pd
+
+from pipeline.popolazione import applica_cambi_di_codice, leggi_posas, leggi_ricostruzione
 
 RICOSTRUZIONE = """"Popolazione per età, vista per territorio - Comuni della Provincia di Prova"
 
@@ -54,3 +56,20 @@ def test_posas_riga_del_totale(tmp_path):
         archivio.writestr("POSAS_2026_it_Comuni.csv", POSAS.encode("utf-8"))
     residenti = leggi_posas(percorso)
     assert residenti.values.tolist() == [["028001", 19000], ["028002", 3100]]
+
+
+def test_cambio_di_codice_solo_dove_manca_il_nuovo():
+    popolazione = pd.DataFrame({
+        "codice_istat": ["041033", "041033", "099030", "092001"],
+        "anno": [2019, 2020, 2020, 2020],
+        "al_1_gennaio": [2020, 2021, 2021, 2021],
+        "residenti": [1100, 1090, 1095, 500],
+    })
+    variazioni = pd.DataFrame({
+        "tipo": ["AP", "AP"],
+        "codice": ["041033", "092001"],
+        # 111001 non compare in nessun file ISTAT: il codice nuovo non si inventa
+        "codice_associato": ["099030", "111001"],
+    })
+    spostata = applica_cambi_di_codice(popolazione, variazioni)
+    assert spostata["codice_istat"].tolist() == ["099030", "041033", "099030", "092001"]

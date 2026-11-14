@@ -11,7 +11,9 @@ RADICE = Path(__file__).resolve().parent.parent
 RAW = RADICE / "data" / "raw"
 PROCESSED = RADICE / "data" / "processed"
 
-ANNI = range(2016, 2026)
+# primo esercizio dei bilanci armonizzati e primo file POSAS; gli ultimi si chiedono alla fonte
+PRIMO_ANNO = 2016
+PRIMA_DATA_POSAS = 2019
 
 OPENBDAP = "https://openbdap.rgs.mef.gov.it"
 URL_ELENCO_ISTAT = (
@@ -19,6 +21,10 @@ URL_ELENCO_ISTAT = (
 )
 URL_POSAS = "https://demo.istat.it/data/posas/POSAS_{anno}_it_Comuni.zip"
 URL_RICOSTRUZIONE = "https://demo.istat.it/data/ricostruzione/PopolazioneEta-Territorio-Comuni.zip"
+URL_VARIAZIONI = (
+    "https://www.istat.it/storage/codici-unita-amministrative/"
+    "Variazioni-amministrative-e-territoriali-dal-1991.zip"
+)
 URL_INDICEPA = "https://indicepa.gov.it/ipa-dati/api/3/action/package_show?id=enti"
 
 

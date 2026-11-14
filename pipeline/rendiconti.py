@@ -15,8 +15,10 @@ log = logging.getLogger(__name__)
 CODIFICA = "cp1252"
 TIPO_COMUNE = "ELCOMU"
 
-# Partite di giro e anticipazioni: movimenti che non sono spesa ne' entrata vera.
-MISSIONI_ESCLUSE = ("60", "99")
+# Partite di giro e anticipazioni: movimenti che non sono spesa ne' entrata vera. Della missione
+# 60 (anticipazioni) la restituzione e' il titolo 5; resta nella spesa il titolo 1, gli
+# interessi pagati davvero, come nel portale OpenBDAP.
+MISSIONI_ESCLUSE = ("99",)
 TITOLI_SPESA_ESCLUSI = ("05", "07")
 TITOLI_ENTRATA_ESCLUSI = ("07", "09")
 

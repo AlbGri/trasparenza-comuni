@@ -39,7 +39,7 @@ FONTE_RISULTATO = (
 )
 FONTE_INDICATORI = "OpenBDAP, Rendiconto, Piano degli indicatori, Sintetici Allegato 2-a"
 PRO_CAPITE = "diviso i residenti ISTAT al 1 gennaio dell'anno dopo"
-SENZA_GIRO = "senza partite di giro e anticipazioni"
+SENZA_GIRO = "senza partite di giro e restituzione delle anticipazioni di cassa"
 
 
 def identificativo_gruppo(fascia: int, ambito: str) -> str:

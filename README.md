@@ -85,7 +85,8 @@ regioni ordinarie in quattro aree, ogni regione a statuto speciale a sé. Un gru
 20 comuni si allarga alle regioni dello stesso tipo, poi a tutta Italia, e lo dichiara.
 
 In `spese` ed `entrate` la colonna `esclusa` segna partite di giro e anticipazioni di cassa, che
-non sono spesa né entrata vera. Gli impegni (competenza) e i pagamenti (cassa) sono misure
+non sono spesa né entrata vera. Gli interessi pagati sulle anticipazioni (missione 60, titolo 1)
+sono spesa e restano, come nel portale OpenBDAP. Gli impegni (competenza) e i pagamenti (cassa) sono misure
 diverse e non vanno sommati né confrontati fra loro.
 
 ## Esportazione

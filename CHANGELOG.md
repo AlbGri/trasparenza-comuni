@@ -15,6 +15,8 @@
 - Spesa di personale, investimenti e debito per abitante: un valore negativo non si mostra; per
   personale e investimenti nemmeno un valore lontano da quello che risulta dagli altri numeri
   del rendiconto (sotto la metà o oltre il doppio), segno di un'unità di misura sbagliata.
+- La spesa corrente comprende gli interessi pagati sulle anticipazioni di cassa, come nel
+  portale OpenBDAP; restano fuori solo partite di giro e restituzione delle anticipazioni.
 - Andamento: quanto cambiano spesa ed entrate per abitante rispetto all'anno prima, a confronto
   con il cambiamento dei comuni simili.
 - Parte disponibile del risultato di amministrazione per abitante (negativa = disavanzo).

@@ -103,10 +103,9 @@ def test_numeri_decimali_e_celle_vuote(csv_spese, tmp_path):
 def test_esclusioni_della_spesa(csv_spese, tmp_path):
     converti(csv_spese, TABELLE["spese"], tmp_path / "spese.parquet")
     spese = pd.read_parquet(tmp_path / "spese.parquet")
+    # gli interessi sulle anticipazioni (missione 60, titolo 1) sono spesa vera
     escluse = spese[spese["esclusa"]]
-    assert sorted(zip(escluse["missione"], escluse["titolo"])) == [
-        ("50", "05"), ("60", "01"), ("99", "07"),
-    ]
+    assert sorted(zip(escluse["missione"], escluse["titolo"])) == [("50", "05"), ("99", "07")]
 
 
 def test_esclusioni_delle_entrate(tmp_path):

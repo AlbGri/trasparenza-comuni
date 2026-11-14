@@ -19,6 +19,8 @@
   portale OpenBDAP; restano fuori solo partite di giro e restituzione delle anticipazioni.
 - Andamento: quanto cambiano spesa ed entrate per abitante rispetto all'anno prima, a confronto
   con il cambiamento dei comuni simili.
+- Comuni estinti senza dati ISTAT sui residenti (131 rendiconti del 2016, 104 del 2017): la
+  scheda mostra gli importi, senza valori per abitante né confronti.
 - Parte disponibile del risultato di amministrazione per abitante (negativa = disavanzo).
 - Descrizioni ufficiali dei codici di bilancio; indice dei prezzi IPCA per mostrare gli euro a
   prezzi costanti.

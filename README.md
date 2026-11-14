@@ -74,7 +74,7 @@ Tabelle prodotte, tutte per i soli comuni:
 | `popolazione` | residenti al 1 gennaio dell'anno successivo a quello di bilancio | ISTAT |
 | `gruppi` | gruppo di comuni simili di ogni comune, anno per anno: fascia di abitanti e area | pipeline |
 | `dimensione_gruppi` | comuni di ogni gruppo, con quanti hanno e non hanno il rendiconto | pipeline |
-| `posizioni` | valori per abitante (spesa, entrate, risultato) e indicatori ufficiali, con posizione nel gruppo e andamento | pipeline |
+| `posizioni` | valori per abitante (spesa, entrate, risultato) e indicatori ufficiali, con posizione nel gruppo e andamento; per un comune senza residenti ISTAT, solo gli importi | pipeline |
 | `confronti` | mediana, percentili e variazione mediana di ogni gruppo, voce per voce | pipeline |
 | `codici` | descrizione di missioni, programmi, titoli, tipologie, voci e indicatori | OpenBDAP |
 | `prezzi` | indice IPCA, media annua | Eurostat |
@@ -100,6 +100,9 @@ I file per il sito e per chi vuole riusare i dati, in `data/export/`:
 | `gruppi/{fascia}-{ambito}.json` | comuni di ogni gruppo, quanti hanno consegnato, percentili per voce e anno |
 | `dizionario.json` | nome, unità, misura, fonte e metodo di ogni voce |
 | `meta.json` | data dei dati per anno, fasce di abitanti, indice dei prezzi |
+
+Un comune estinto prima del 2019 può non avere i residenti ISTAT degli anni in cui esisteva:
+la sua scheda ha gli importi, senza valori per abitante, gruppo e indicatori ufficiali.
 
 ## Struttura
 

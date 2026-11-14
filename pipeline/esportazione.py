@@ -239,9 +239,10 @@ def esporta(cartella: Path = PROCESSED, uscita: Path = EXPORT) -> int:
         for f, a in zip(gruppi["fascia"], gruppi["ambito"])
     ]
     righe = posizioni.merge(gruppi[["cf", "anno", "fascia", "ambito"]], on=["cf", "anno"])
+    # left: chi non ha residenti non ha gruppo, ma gli importi restano
     righe = righe.merge(
         confronti[["anno", "misura", "codice", "fascia", "ambito", "mediana"]],
-        on=["anno", "misura", "codice", "fascia", "ambito"],
+        on=["anno", "misura", "codice", "fascia", "ambito"], how="left",
     )
     istat = dict(zip(enti["cf"], enti["codice_istat"]))
     predecessori = enti[enti["successore"].notna()].groupby("successore")["codice_istat"]

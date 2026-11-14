@@ -180,7 +180,9 @@ def calcola_anno(
     nella tabella di quella voce. Gli indicatori ufficiali entrano come sono, senza i valori
     vuoti. La posizione e' la percentuale degli altri comuni del gruppo con un valore piu'
     basso. La variazione e' quella sull'anno prima, in percentuale, se l'anno prima il valore
-    era positivo; lo scarto e' la variazione meno la mediana delle variazioni del gruppo.
+    era positivo; lo scarto e' la variazione meno la mediana delle variazioni del gruppo. Un
+    comune consegnato senza residenti ha solo gli importi: niente gruppo, pro capite,
+    indicatori ufficiali (la scala di 4.4 e 7.4 non si controlla) ne' posizione.
 
     Args:
         tabelle: spese, entrate, risultato, indicatori_ufficiali dell'anno (o percorsi Parquet).
@@ -206,28 +208,31 @@ def calcola_anno(
             "INSERT INTO precedente SELECT cf, misura, codice, valore FROM righe_precedenti"
         )
     anno = int(gruppi["anno"].iloc[0])
-    validi = gruppi[(gruppi["stato"] == "consegnato") & gruppi["fascia"].notna()].copy()
+    consegnati = gruppi[gruppi["stato"] == "consegnato"]
+    validi = consegnati[consegnati["fascia"].notna()].copy()
     validi["ambito_tipo"] = _ambiti_candidati(validi)["tipo di regione"]
     validi["fascia"] = validi["fascia"].astype(int)
     con.register("gruppi", validi)
+    con.register("consegnati", consegnati[["cf", "residenti"]])
     con.execute(f"""
-        CREATE TABLE valori AS
+        CREATE TABLE euro AS
         WITH voci AS ({VOCI}),
         elenco AS (SELECT DISTINCT fonte, misura, codice FROM voci),
         presenti AS (
             SELECT DISTINCT cf, 'spese' AS fonte FROM spese
             UNION SELECT DISTINCT cf, 'entrate' FROM entrate
             UNION SELECT DISTINCT cf, 'risultato' FROM risultato
-        ),
-        euro AS (
-            SELECT p.cf, e.misura, e.codice, coalesce(v.importo, 0)::DOUBLE AS importo,
-                coalesce(v.importo, 0)::DOUBLE / g.residenti AS valore
-            FROM presenti p
-            JOIN elenco e USING (fonte)
-            JOIN gruppi g ON g.cf = p.cf
-            LEFT JOIN voci v ON v.cf = p.cf AND v.misura = e.misura AND v.codice = e.codice
-        ),
-        codificati AS (
+        )
+        SELECT p.cf, e.misura, e.codice, coalesce(v.importo, 0)::DOUBLE AS importo,
+            coalesce(v.importo, 0)::DOUBLE / c.residenti AS valore
+        FROM presenti p
+        JOIN elenco e USING (fonte)
+        JOIN consegnati c ON c.cf = p.cf
+        LEFT JOIN voci v ON v.cf = p.cf AND v.misura = e.misura AND v.codice = e.codice
+    """)
+    con.execute(f"""
+        CREATE TABLE valori AS
+        WITH codificati AS (
             SELECT cf, gruppo || '.' || indicatore AS codice, valore::DOUBLE AS valore
             FROM indicatori_ufficiali WHERE valore IS NOT NULL
         ),
@@ -297,7 +302,10 @@ def calcola_anno(
         FROM valori v
         JOIN confronti c ON c.misura = v.misura AND c.codice = v.codice
             AND c.fascia = v.fascia AND c.ambito = v.ambito
-        ORDER BY v.cf, v.misura, v.codice
+        UNION ALL
+        SELECT cf, {anno}::SMALLINT, misura, codice, importo, NULL, NULL, NULL, NULL
+        FROM euro WHERE cf NOT IN (SELECT cf FROM gruppi)
+        ORDER BY cf, misura, codice
     """).df()
     return posizioni, con.execute("SELECT * FROM confronti").df()
 

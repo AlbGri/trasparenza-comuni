@@ -42,7 +42,8 @@ def misura(cartella: Path = PROCESSED) -> pd.DataFrame:
             quantile_cont(p.valore, 0.5) AS valore
         FROM read_parquet('{(cartella / "posizioni" / "*.parquet").as_posix()}') p
         JOIN read_parquet('{(cartella / "gruppi.parquet").as_posix()}') g USING (cf, anno)
-        WHERE p.misura = 'spesa_titolo' AND p.codice = '01' GROUP BY ALL
+        WHERE p.misura = 'spesa_titolo' AND p.codice = '01' AND g.fascia IS NOT NULL
+        GROUP BY ALL
     """).df()
     lunghe = [
         tabella.melt(id_vars="anno", var_name="misura", value_name="valore")

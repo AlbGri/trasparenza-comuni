@@ -139,6 +139,38 @@ def test_pro_capite_zeri_e_posizioni():
     assert (corrente["comuni"], corrente["mediana"], corrente["ambito"]) == (3, 1.0, "Centro")
 
 
+def test_senza_residenti_solo_importi():
+    gruppi = pd.DataFrame({
+        "cf": ["a", "b", "x"], "anno": 2017, "stato": "consegnato",
+        "residenti": [1_000, 3_000, None], "al_1_gennaio": 2018, "fascia": [2, 2, None],
+        "area": "Sud", "livello": ["area", "area", None], "ambito": ["Sud", "Sud", None],
+    })
+    gruppi["fascia"] = gruppi["fascia"].astype("Int8")
+    spese = pd.DataFrame({
+        "cf": ["a", "b", "x"], "missione": "01", "programma": "01", "titolo": "01",
+        "impegni": [Decimal(v) for v in ("1000", "6000", "50000")], "esclusa": False,
+    })
+    vuota = pd.DataFrame({"cf": pd.Series(dtype=str)})
+    tabelle = {
+        "spese": spese,
+        "entrate": vuota.assign(titolo="", accertamenti=0, esclusa=False),
+        "risultato": vuota.assign(voce="", valore=0),
+        "indicatori_ufficiali": pd.DataFrame({
+            "cf": ["x"], "gruppo": ["04"], "indicatore": ["04"], "valore": [Decimal("12")],
+        }),
+    }
+    posizioni, confronti = calcola_anno(tabelle, gruppi)
+    di_x = posizioni[posizioni["cf"] == "x"]
+    # titolo, missione e programma; l'indicatore resta fuori
+    assert di_x["misura"].tolist() == [
+        "spesa_corrente_missione", "spesa_corrente_programma", "spesa_titolo"
+    ]
+    assert di_x["importo"].tolist() == [50000.0] * 3
+    assert di_x[["valore", "posizione", "scarto"]].isna().all().all()
+    riga = confronti.set_index(["misura", "codice"]).loc[("spesa_titolo", "01")]
+    assert (riga["comuni"], riga["mediana"]) == (2, 1.5)
+
+
 def test_andamento_scarto_dalla_mediana_delle_variazioni():
     gruppi = pd.DataFrame({
         "cf": ["a", "b", "c", "d"], "anno": 2024, "stato": "consegnato",

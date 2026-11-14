@@ -78,7 +78,6 @@ diverse e non vanno sommati né confrontati fra loro.
 trasparenza-comuni/
 ├── pipeline/           # Scarico delle fonti e tabelle di base, un modulo per passo
 ├── tests/              # Prove automatiche
-├── notebooks/          # Prime esplorazioni delle fonti, superate dalla pipeline
 ├── requirements.txt    # Dipendenze Python
 └── data/               # Dati scaricati ed elaborati, non versionati
 ```

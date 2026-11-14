@@ -104,13 +104,18 @@ def test_pro_capite_zeri_e_posizioni():
         "valore": [Decimal("-500"), Decimal("200")],
     })
     # 4.4 a zero: per a il 4.1 e' positivo (non compilato), per b il 4.1 manca (resta zero)
-    # 9.5: zero (a) e fuori scala (b) vuoti, -12 giorni (c) valido
+    # 9.5: zero (a) e fuori scala (b) vuoti, -12 giorni (c) valido.
+    # 7.4 atteso = 7.1 per la spesa dei titoli 1 e 2 pro capite: a 0,75 (scritto 750, fuori
+    # scala), b 0,3 con il 7.1 scritto come frazione (0,1 per 10%: valido); c negativo senza
+    # gemello, fuori scala
     indicatori = pd.DataFrame({
-        "cf": ["a", "b", "c", "a", "b", "a", "b", "c"],
-        "gruppo": ["04"] * 5 + ["09"] * 3,
-        "indicatore": ["01", "01", "01", "04", "04", "05", "05", "05"],
+        "cf": ["a", "b", "c", "a", "b", "a", "b", "c", "a", "b", "a", "b", "c"],
+        "gruppo": ["04"] * 5 + ["09"] * 3 + ["07"] * 5,
+        "indicatore": ["01", "01", "01", "04", "04", "05", "05", "05",
+                       "01", "01", "04", "04", "04"],
         "valore": [Decimal(v) if v else None
-                   for v in ("20", None, "30", "0", "0", "0", "-1200", "-12")],
+                   for v in ("20", None, "30", "0", "0", "0", "-1200", "-12",
+                             "50", "0.1", "750", "0.3", "-5")],
     })
     tabelle = {
         "spese": spese, "entrate": entrate, "risultato": risultato,
@@ -129,6 +134,7 @@ def test_pro_capite_zeri_e_posizioni():
     assert valori.loc[("indicatore", "04.01"), "valore"].tolist() == [20.0, 30.0]
     assert valori.loc[("indicatore", "04.04")].index.tolist() == ["b"]
     assert valori.loc[("indicatore", "09.05")].index.tolist() == ["c"]
+    assert valori.loc[("indicatore", "07.04")].index.tolist() == ["b"]
     corrente = confronti.set_index(["misura", "codice"]).loc[("spesa_titolo", "01")]
     assert (corrente["comuni"], corrente["mediana"], corrente["ambito"]) == (3, 1.0, "Centro")
 

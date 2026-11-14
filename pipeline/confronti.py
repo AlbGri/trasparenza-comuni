@@ -64,6 +64,13 @@ TABELLE_ANNO = ("spese", "entrate", "risultato", "indicatori_ufficiali")
 # debito. Zero con il gemello positivo = popolazione non compilata dal comune: il valore si
 # tratta come assente (FONTI 1, Piano degli indicatori).
 GEMELLI = {"04.04": "04.01", "07.04": "07.01", "10.04": "10.03"}
+# Controllo di scala dei pro capite: il gemello (percentuale) per la spesa pro capite di questi
+# titoli da' il valore atteso. Fuori dall'intervallo ammesso il comune ha scritto un'unita'
+# sbagliata (es. migliaia come euro). Ampio perche' popolazione e FPV differiscono. Vale anche
+# l'atteso per 100: il gemello scritto come frazione (0,22 per 22%) non rende sbagliato il pro
+# capite. Un pro capite negativo e' sempre fuori scala.
+SCALA = {"04.04": ("01",), "07.04": ("01", "02")}
+SCALA_AMMESSA = (0.5, 2)
 # Giorni di ritardo dei pagamenti (9.5) plausibili. Sotto i -60 si pagherebbe prima della
 # fattura (sono giorni scritti per 100); lo zero esatto e' un campo non compilato.
 TEMPESTIVITA = ("09.05", -60, 365)
@@ -225,12 +232,29 @@ def calcola_anno(
             FROM indicatori_ufficiali WHERE valore IS NOT NULL
         ),
         gemelli (codice, gemello) AS (VALUES {", ".join(map(str, GEMELLI.items()))}),
+        scala (codice, titolo) AS (
+            VALUES {", ".join(str((c, t)) for c, titoli in SCALA.items() for t in titoli)}
+        ),
+        attesi AS (
+            SELECT s.codice, e.cf, any_value(t.valore) / 100 * sum(e.valore) AS atteso
+            FROM scala s
+            JOIN gemelli USING (codice)
+            JOIN euro e ON e.misura = 'spesa_titolo' AND e.codice = s.titolo
+            JOIN codificati t ON t.cf = e.cf AND t.codice = gemelli.gemello
+            GROUP BY s.codice, e.cf
+        ),
         ufficiali AS (
             SELECT i.cf, 'indicatore' AS misura, i.codice, NULL::DOUBLE AS importo, i.valore
             FROM codificati i
             LEFT JOIN gemelli USING (codice)
             LEFT JOIN codificati t ON t.cf = i.cf AND t.codice = gemelli.gemello
+            LEFT JOIN attesi a ON a.cf = i.cf AND a.codice = i.codice
             WHERE NOT coalesce(i.valore = 0 AND t.valore > 0, false)
+                AND NOT (gemelli.gemello IS NOT NULL AND i.valore < 0)
+                AND NOT coalesce(a.atteso > 0 AND i.valore NOT BETWEEN
+                    {SCALA_AMMESSA[0]} * a.atteso AND {SCALA_AMMESSA[1]} * a.atteso
+                    AND i.valore NOT BETWEEN {SCALA_AMMESSA[0]} * a.atteso * 100
+                    AND {SCALA_AMMESSA[1]} * a.atteso * 100, false)
                 AND NOT (i.codice = '{TEMPESTIVITA[0]}' AND (i.valore = 0
                     OR i.valore NOT BETWEEN {TEMPESTIVITA[1]} AND {TEMPESTIVITA[2]}))
         )

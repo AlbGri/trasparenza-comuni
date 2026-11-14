@@ -12,6 +12,9 @@
   compilato vale come dato assente.
 - Tempestività dei pagamenti: si mostrano solo i valori fra 60 giorni di anticipo e 365 di
   ritardo, diversi da zero; gli altri sono campi non compilati o scritti in una scala sbagliata.
+- Spesa di personale, investimenti e debito per abitante: un valore negativo non si mostra; per
+  personale e investimenti nemmeno un valore lontano da quello che risulta dagli altri numeri
+  del rendiconto (sotto la metà o oltre il doppio), segno di un'unità di misura sbagliata.
 - Andamento: quanto cambiano spesa ed entrate per abitante rispetto all'anno prima, a confronto
   con il cambiamento dei comuni simili.
 - Parte disponibile del risultato di amministrazione per abitante (negativa = disavanzo).

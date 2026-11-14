@@ -7,6 +7,16 @@
 - Codice ISTAT anche per i comuni estinti; le consegne distinguono "non consegnato" da "non
   esisteva".
 - Controlli automatici dei numeri a fine lancio.
+- Indicatori ufficiali del comune confrontati con i comuni simili (mediana e posizione). Per
+  personale, investimenti e debito per abitante, uno zero che il comune ha lasciato non
+  compilato vale come dato assente.
+- Andamento: quanto cambiano spesa ed entrate per abitante rispetto all'anno prima, a confronto
+  con il cambiamento dei comuni simili.
+- Parte disponibile del risultato di amministrazione per abitante (negativa = disavanzo).
+- Descrizioni ufficiali dei codici di bilancio; indice dei prezzi IPCA per mostrare gli euro a
+  prezzi costanti.
+- Esportazione in file JSON: una scheda per comune, indice dei comuni, gruppi di confronto,
+  dizionario delle voci.
 
 ## 2026-11-12
 

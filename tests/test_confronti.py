@@ -99,13 +99,61 @@ def test_pro_capite_zeri_e_posizioni():
         "accertamenti": [Decimal(v) for v in ("300", "7000", "800")],
         "esclusa": [False, True, False],
     })
-    procapite, confronti = calcola_anno(spese, entrate, gruppi)
-    valori = procapite.set_index(["misura", "codice", "cf"]).sort_index()
+    risultato = pd.DataFrame({
+        "cf": ["a", "b"], "voce": ["0502", "0502"],
+        "valore": [Decimal("-500"), Decimal("200")],
+    })
+    indicatori = pd.DataFrame({
+        "cf": ["a", "b", "c"], "gruppo": "04", "indicatore": "01",
+        "valore": [Decimal("20"), None, Decimal("30")],
+    })
+    tabelle = {
+        "spese": spese, "entrate": entrate, "risultato": risultato,
+        "indicatori_ufficiali": indicatori,
+    }
+    posizioni, confronti = calcola_anno(tabelle, gruppi)
+    valori = posizioni.set_index(["misura", "codice", "cf"]).sort_index()
     # corrente pro capite: a 1, b 3, c 1; la partita di giro di c resta fuori
-    assert valori.loc[("spesa_titolo", "01"), "procapite"].tolist() == [1.0, 3.0, 1.0]
+    assert valori.loc[("spesa_titolo", "01"), "valore"].tolist() == [1.0, 3.0, 1.0]
     assert valori.loc[("spesa_titolo", "01"), "posizione"].tolist() == [0.0, 100.0, 0.0]
     assert valori.loc[("spesa_titolo", "02", "b"), "importo"] == 0
-    assert valori.loc[("entrate_proprie", "01+03"), "procapite"].tolist() == [0.3, 0.4]
+    assert valori.loc[("entrate_proprie", "01+03"), "valore"].tolist() == [0.3, 0.4]
     assert ("entrate_titolo", "09", "a") not in valori.index
+    assert valori.loc[("risultato_disponibile", "0502"), "valore"].tolist() == [-0.5, 0.1]
+    # l'indicatore vuoto di b resta fuori, non vale zero
+    assert valori.loc[("indicatore", "04.01"), "valore"].tolist() == [20.0, 30.0]
     corrente = confronti.set_index(["misura", "codice"]).loc[("spesa_titolo", "01")]
     assert (corrente["comuni"], corrente["mediana"], corrente["ambito"]) == (3, 1.0, "Centro")
+
+
+def test_andamento_scarto_dalla_mediana_delle_variazioni():
+    gruppi = pd.DataFrame({
+        "cf": ["a", "b", "c", "d"], "anno": 2024, "stato": "consegnato",
+        "residenti": 1_000, "al_1_gennaio": 2025, "fascia": 2,
+        "area": "Centro", "livello": "area", "ambito": "Centro",
+    })
+    spese = pd.DataFrame({
+        "cf": ["a", "b", "c", "d"], "missione": "01", "programma": "01", "titolo": "01",
+        "impegni": [Decimal(v) for v in ("1100", "1200", "1300", "500")],
+        "esclusa": False,
+    })
+    vuota = pd.DataFrame({"cf": pd.Series(dtype=str)})
+    tabelle = {
+        "spese": spese,
+        "entrate": vuota.assign(titolo="", accertamenti=0, esclusa=False),
+        "risultato": vuota.assign(voce="", valore=0),
+        "indicatori_ufficiali": vuota.assign(gruppo="", indicatore="", valore=0),
+    }
+    # l'anno prima d valeva zero: niente variazione
+    precedente = pd.DataFrame({
+        "cf": ["a", "b", "c", "d"], "misura": "spesa_titolo", "codice": "01",
+        "valore": [1.0, 1.0, 1.0, 0.0],
+    })
+    posizioni, confronti = calcola_anno(tabelle, gruppi, precedente)
+    corrente = posizioni[posizioni["misura"] == "spesa_titolo"].set_index("cf")
+    assert corrente["variazione"].round(6).tolist()[:3] == [10.0, 20.0, 30.0]
+    assert pd.isna(corrente.loc["d", "variazione"])
+    # mediana delle variazioni 20: scarti -10, 0, +10
+    assert corrente["scarto"].round(6).tolist()[:3] == [-10.0, 0.0, 10.0]
+    riga = confronti.set_index(["misura", "codice"]).loc[("spesa_titolo", "01")]
+    assert round(riga["variazione_mediana"], 6) == 20.0

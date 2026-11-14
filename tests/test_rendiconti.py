@@ -5,7 +5,7 @@ from decimal import Decimal
 import pandas as pd
 import pytest
 
-from pipeline.rendiconti import CODIFICA, TABELLE, converti, converti_soggetti
+from pipeline.rendiconti import CODIFICA, TABELLE, converti, converti_soggetti, scrivi_codici
 from pipeline.scarico import trascrivi_utf8
 
 COMUNI = [
@@ -21,7 +21,8 @@ SPESE = COMUNI + [
     "Pre.  Def. in CC", "Impegni", "Tot. Pag.",
 ]
 ENTRATE = COMUNI + [
-    "Codice Titolo Entrata Arconet", "Cod Tipologia Entrata Arconet", "Accert. in CC",
+    "Codice Titolo Entrata Arconet", "Desc Titolo Entrata Arconet",
+    "Cod Tipologia Entrata Arconet", "Desc Tipologia Entrata Arconet", "Accert. in CC",
     "Tot. Riscos.",
 ]
 FORLI = ["2024", "ELCOMU", "COMUNI", "111", "COMUNE DI FORLÌ", "00606620409", "", "2",
@@ -81,6 +82,7 @@ def test_colonna_vuota_finale_scartata(csv_spese, tmp_path):
     assert list(spese.columns) == [
         "cf", "anno", "missione", "programma", "titolo",
         "impegni", "pagamenti_totali", "previsioni_definitive", "esclusa",
+        "desc_missione", "desc_programma", "desc_titolo",
     ]
 
 
@@ -108,11 +110,23 @@ def test_esclusioni_della_spesa(csv_spese, tmp_path):
 
 
 def test_esclusioni_delle_entrate(tmp_path):
-    righe = [FORLI + [titolo, "0100", "1", "1"] for titolo in ("01", "06", "07", "09")]
+    righe = [FORLI + [titolo, "t", "0100", "p", "1", "1"] for titolo in ("01", "06", "07", "09")]
     csv = scrivi_csv(tmp_path / "entrate.csv", ENTRATE, righe)
     converti(csv, TABELLE["entrate"], tmp_path / "entrate.parquet")
     entrate = pd.read_parquet(tmp_path / "entrate.parquet")
     assert entrate[entrate["esclusa"]]["titolo"].tolist() == ["07", "09"]
+
+
+def test_descrizioni_dei_codici_dall_ultimo_anno(tmp_path):
+    for anno, descrizione in ((2023, "Vecchio   nome"), (2024, "  Nuovo   nome  ")):
+        riga = spesa(FORLI, "09", "01", "1", programma="03")
+        riga[0], riga[18] = str(anno), descrizione
+        csv = scrivi_csv(tmp_path / f"{anno}.csv", SPESE, [riga])
+        converti(csv, TABELLE["spese"], tmp_path / "spese" / f"{anno}.parquet")
+    scrivi_codici(tmp_path)
+    codici = pd.read_parquet(tmp_path / "codici.parquet").set_index(["campo", "codice"])
+    assert codici.loc[("programma", "0903"), "descrizione"] == "Nuovo nome"
+    assert codici.loc[("missione", "09"), "anno"] == 2024
 
 
 def test_colonna_mancante(tmp_path):

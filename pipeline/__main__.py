@@ -8,13 +8,15 @@ import argparse
 import logging
 import sys
 
-from pipeline import anagrafica, confronti, controlli, popolazione, rendiconti
+from pipeline import (
+    anagrafica, confronti, controlli, esportazione, popolazione, prezzi, rendiconti,
+)
 from pipeline.fonti import PRIMO_ANNO, url_rendiconto
 from pipeline.scarico import Registro, anni_pubblicati, nuova_sessione
 
 log = logging.getLogger("pipeline")
 
-PASSI = ["rendiconti", "anagrafica", "popolazione", "confronti"]
+PASSI = ["rendiconti", "anagrafica", "popolazione", "prezzi", "confronti", "esportazione"]
 
 
 def _anni(testo: str) -> range:
@@ -53,9 +55,15 @@ def main() -> None:
     if "popolazione" in argomenti.passi:
         riscritta = popolazione.aggiorna(registro, sessione)
         log.info("popolazione: %s", "riscritta" if riscritta else "invariata")
+    if "prezzi" in argomenti.passi:
+        riscritta = prezzi.aggiorna(registro, sessione)
+        log.info("prezzi: %s", "riscritti" if riscritta else "invariati")
     if "confronti" in argomenti.passi:
         riscritti = confronti.aggiorna()
         log.info("confronti: %s", "ricalcolati" if riscritti else "invariati")
+    if "esportazione" in argomenti.passi:
+        riscritta = esportazione.aggiorna()
+        log.info("esportazione: %s", "riscritta" if riscritta else "invariata")
     if not controlli.esegui():
         sys.exit(1)
 

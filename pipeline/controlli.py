@@ -39,8 +39,8 @@ def misura(cartella: Path = PROCESSED) -> pd.DataFrame:
     """).df()
     mediane = con.execute(f"""
         SELECT p.anno, 'mediana_fascia_' || g.fascia AS misura,
-            quantile_cont(p.procapite, 0.5) AS valore
-        FROM read_parquet('{(cartella / "procapite" / "*.parquet").as_posix()}') p
+            quantile_cont(p.valore, 0.5) AS valore
+        FROM read_parquet('{(cartella / "posizioni" / "*.parquet").as_posix()}') p
         JOIN read_parquet('{(cartella / "gruppi.parquet").as_posix()}') g USING (cf, anno)
         WHERE p.misura = 'spesa_titolo' AND p.codice = '01' GROUP BY ALL
     """).df()

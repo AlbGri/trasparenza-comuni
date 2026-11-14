@@ -1,4 +1,4 @@
-"""Gruppi di comuni simili, valori pro capite, percentili del gruppo e posizione del comune.
+"""Gruppi di comuni simili; valori pro capite e indicatori con posizione, andamento e percentili.
 
 Il gruppo e' fascia di abitanti per area (regioni ordinarie in quattro aree, ogni regione
 speciale a se'). Sotto i 20 comuni con rendiconto e popolazione si allarga: alle regioni dello
@@ -30,9 +30,10 @@ ITALIA = "Italia"
 LIVELLI = ["area", "tipo di regione", "Italia"]
 MINIMO_GRUPPO = 20
 
-# Voci pro capite: impegni della spesa e accertamenti delle entrate (competenza), senza partite
-# di giro e anticipazioni. `fonte` dice di quale tabella il comune deve essere presente
-# perche' una voce assente valga zero.
+# Voci in euro pro capite: impegni della spesa e accertamenti delle entrate (competenza), senza
+# partite di giro e anticipazioni, e parte disponibile del risultato di amministrazione.
+# `fonte` dice di quale tabella il comune deve essere presente perche' una voce assente valga
+# zero.
 VOCI = """
 SELECT cf, 'spese' AS fonte, 'spesa_titolo' AS misura, titolo AS codice,
     sum(impegni) AS importo FROM spese WHERE NOT esclusa GROUP BY ALL
@@ -48,7 +49,17 @@ SELECT cf, 'entrate', 'entrate_titolo', titolo, sum(accertamenti)
 UNION ALL
 SELECT cf, 'entrate', 'entrate_proprie', '01+03', sum(accertamenti)
     FROM entrate WHERE titolo IN ('01', '03') GROUP BY ALL
+UNION ALL
+SELECT cf, 'risultato', 'risultato_disponibile', voce, valore
+    FROM risultato WHERE voce = '0502'
 """
+# Misure di cui si calcola l'andamento: la variazione di un saldo che puo' essere negativo,
+# come il risultato, non ha un senso percentuale.
+MISURE_CON_ANDAMENTO = (
+    "spesa_titolo", "spesa_corrente_missione", "spesa_corrente_programma", "entrate_titolo",
+    "entrate_proprie",
+)
+TABELLE_ANNO = ("spese", "entrate", "risultato", "indicatori_ufficiali")
 
 
 def residenti_per_ente(enti: pd.DataFrame, popolazione: pd.DataFrame) -> pd.DataFrame:
@@ -145,30 +156,44 @@ def dimensione_gruppi(gruppi: pd.DataFrame) -> pd.DataFrame:
 
 
 def calcola_anno(
-    spese: pd.DataFrame | str, entrate: pd.DataFrame | str, gruppi: pd.DataFrame
+    tabelle: dict[str, pd.DataFrame | str],
+    gruppi: pd.DataFrame,
+    precedente: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Pro capite, posizione nel gruppo e percentili dei gruppi per un anno.
+    """Valori, posizione nel gruppo, andamento e percentili dei gruppi per un anno.
 
-    Una voce che il comune non ha vale zero, se il comune e' nella tabella di quella voce.
-    La posizione e' la percentuale degli altri comuni del gruppo con un valore piu' basso.
+    Le voci in euro sono pro capite; una voce che il comune non ha vale zero, se il comune e'
+    nella tabella di quella voce. Gli indicatori ufficiali entrano come sono, senza i valori
+    vuoti. La posizione e' la percentuale degli altri comuni del gruppo con un valore piu'
+    basso. La variazione e' quella sull'anno prima, in percentuale, se l'anno prima il valore
+    era positivo; lo scarto e' la variazione meno la mediana delle variazioni del gruppo.
 
     Args:
-        spese, entrate: tabelle dell'anno, o percorso del Parquet.
+        tabelle: spese, entrate, risultato, indicatori_ufficiali dell'anno (o percorsi Parquet).
         gruppi: gruppi dell'anno, da `costruisci_gruppi`.
+        precedente: posizioni dell'anno prima (cf, misura, codice, valore), per l'andamento.
 
     Returns:
-        (procapite, confronti): una riga per comune e voce; una riga per gruppo usato e voce.
+        (posizioni, confronti): una riga per comune e voce; una riga per gruppo usato e voce.
     """
     con = duckdb.connect()
-    for nome, tabella in (("spese", spese), ("entrate", entrate)):
+    for nome in TABELLE_ANNO:
+        tabella = tabelle[nome]
         if isinstance(tabella, str):
             con.execute(f"CREATE VIEW {nome} AS SELECT * FROM read_parquet('{tabella}')")
         else:
             con.register(nome, tabella)
+    con.execute(
+        "CREATE TABLE precedente (cf VARCHAR, misura VARCHAR, codice VARCHAR, valore DOUBLE)"
+    )
+    if precedente is not None:
+        con.register("righe_precedenti", precedente)
+        con.execute(
+            "INSERT INTO precedente SELECT cf, misura, codice, valore FROM righe_precedenti"
+        )
     anno = int(gruppi["anno"].iloc[0])
     validi = gruppi[(gruppi["stato"] == "consegnato") & gruppi["fascia"].notna()].copy()
-    candidati = _ambiti_candidati(validi)
-    validi["ambito_tipo"] = candidati["tipo di regione"]
+    validi["ambito_tipo"] = _ambiti_candidati(validi)["tipo di regione"]
     validi["fascia"] = validi["fascia"].astype(int)
     con.register("gruppi", validi)
     con.execute(f"""
@@ -178,53 +203,74 @@ def calcola_anno(
         presenti AS (
             SELECT DISTINCT cf, 'spese' AS fonte FROM spese
             UNION SELECT DISTINCT cf, 'entrate' FROM entrate
+            UNION SELECT DISTINCT cf, 'risultato' FROM risultato
+        ),
+        euro AS (
+            SELECT p.cf, e.misura, e.codice, coalesce(v.importo, 0)::DOUBLE AS importo,
+                coalesce(v.importo, 0)::DOUBLE / g.residenti AS valore
+            FROM presenti p
+            JOIN elenco e USING (fonte)
+            JOIN gruppi g ON g.cf = p.cf
+            LEFT JOIN voci v ON v.cf = p.cf AND v.misura = e.misura AND v.codice = e.codice
+        ),
+        ufficiali AS (
+            SELECT cf, 'indicatore' AS misura, gruppo || '.' || indicatore AS codice,
+                NULL::DOUBLE AS importo, valore::DOUBLE AS valore
+            FROM indicatori_ufficiali WHERE valore IS NOT NULL
         )
-        SELECT p.cf, e.misura, e.codice, coalesce(v.importo, 0)::DOUBLE AS importo,
-            coalesce(v.importo, 0)::DOUBLE / g.residenti AS procapite,
+        SELECT u.cf, u.misura, u.codice, u.importo, u.valore,
+            CASE WHEN u.misura IN {MISURE_CON_ANDAMENTO} AND p.valore > 0
+                THEN 100 * (u.valore / p.valore - 1) END AS variazione,
             g.fascia, g.area, g.ambito_tipo, g.livello, g.ambito
-        FROM presenti p
-        JOIN elenco e USING (fonte)
-        JOIN gruppi g ON g.cf = p.cf
-        LEFT JOIN voci v ON v.cf = p.cf AND v.misura = e.misura AND v.codice = e.codice
+        FROM (SELECT * FROM euro UNION ALL SELECT * FROM ufficiali) u
+        JOIN gruppi g ON g.cf = u.cf
+        LEFT JOIN precedente p ON p.cf = u.cf AND p.misura = u.misura AND p.codice = u.codice
     """)
-    procapite = con.execute(f"""
-        SELECT cf, {anno}::SMALLINT AS anno, misura, codice, importo, procapite,
-            100 * CASE livello
-                WHEN 'area' THEN percent_rank() OVER (
-                    PARTITION BY misura, codice, fascia, area ORDER BY procapite)
-                WHEN 'tipo di regione' THEN percent_rank() OVER (
-                    PARTITION BY misura, codice, fascia, ambito_tipo ORDER BY procapite)
-                ELSE percent_rank() OVER (PARTITION BY misura, codice, fascia ORDER BY procapite)
-            END AS posizione
-        FROM valori ORDER BY cf, misura, codice
-    """).df()
-    confronti = con.execute(f"""
+    con.execute(f"""
+        CREATE TABLE confronti AS
         WITH membri AS (
-            SELECT misura, codice, fascia, area AS ambito, procapite FROM valori
-            UNION ALL SELECT misura, codice, fascia, ambito_tipo, procapite FROM valori
-            UNION ALL SELECT misura, codice, fascia, '{ITALIA}', procapite FROM valori
+            SELECT misura, codice, fascia, area AS ambito, valore, variazione FROM valori
+            UNION ALL SELECT misura, codice, fascia, ambito_tipo, valore, variazione FROM valori
+            UNION ALL SELECT misura, codice, fascia, '{ITALIA}', valore, variazione FROM valori
         ),
         usati AS (SELECT DISTINCT fascia, livello, ambito FROM valori)
         SELECT {anno}::SMALLINT AS anno, misura, codice, fascia::TINYINT AS fascia, livello,
             ambito, count(*) AS comuni,
-            quantile_cont(procapite, 0.10) AS p10, quantile_cont(procapite, 0.25) AS p25,
-            quantile_cont(procapite, 0.50) AS mediana, quantile_cont(procapite, 0.75) AS p75,
-            quantile_cont(procapite, 0.90) AS p90
+            quantile_cont(valore, 0.10) AS p10, quantile_cont(valore, 0.25) AS p25,
+            quantile_cont(valore, 0.50) AS mediana, quantile_cont(valore, 0.75) AS p75,
+            quantile_cont(valore, 0.90) AS p90,
+            quantile_cont(variazione, 0.50) AS variazione_mediana
         FROM membri JOIN usati USING (fascia, ambito)
         GROUP BY ALL ORDER BY misura, codice, fascia, ambito
+    """)
+    posizioni = con.execute(f"""
+        SELECT v.cf, {anno}::SMALLINT AS anno, v.misura, v.codice, v.importo, v.valore,
+            100 * CASE v.livello
+                WHEN 'area' THEN percent_rank() OVER (
+                    PARTITION BY v.misura, v.codice, v.fascia, v.area ORDER BY v.valore)
+                WHEN 'tipo di regione' THEN percent_rank() OVER (
+                    PARTITION BY v.misura, v.codice, v.fascia, v.ambito_tipo ORDER BY v.valore)
+                ELSE percent_rank() OVER (
+                    PARTITION BY v.misura, v.codice, v.fascia ORDER BY v.valore)
+            END AS posizione,
+            v.variazione, v.variazione - c.variazione_mediana AS scarto
+        FROM valori v
+        JOIN confronti c ON c.misura = v.misura AND c.codice = v.codice
+            AND c.fascia = v.fascia AND c.ambito = v.ambito
+        ORDER BY v.cf, v.misura, v.codice
     """).df()
-    return procapite, confronti
+    return posizioni, con.execute("SELECT * FROM confronti").df()
 
 
 def aggiorna() -> bool:
-    """Ricalcola gruppi, pro capite e confronti se una tabella a monte e' cambiata.
+    """Ricalcola gruppi, posizioni e confronti se una tabella a monte e' cambiata.
 
     Returns:
         True se le tabelle sono state riscritte.
     """
     ingressi = [PROCESSED / n for n in ("enti.parquet", "consegne.parquet", "popolazione.parquet")]
-    ingressi += sorted((PROCESSED / "spese").glob("*.parquet"))
-    ingressi += sorted((PROCESSED / "entrate").glob("*.parquet"))
+    for nome in TABELLE_ANNO:
+        ingressi += sorted((PROCESSED / nome).glob("*.parquet"))
     uscite = [PROCESSED / n for n in ("gruppi.parquet", "dimensione_gruppi.parquet")]
     uscite.append(PROCESSED / "confronti.parquet")
     if all(u.exists() for u in uscite) and min(u.stat().st_mtime for u in uscite) > max(
@@ -242,17 +288,18 @@ def aggiorna() -> bool:
             senza.groupby("anno").size().to_dict(),
         )
     confronti = []
+    precedente = None
     for anno, gruppi_anno in gruppi.groupby("anno"):
-        spese = PROCESSED / "spese" / f"{anno}.parquet"
-        entrate = PROCESSED / "entrate" / f"{anno}.parquet"
-        procapite, confronti_anno = calcola_anno(
-            spese.as_posix(), entrate.as_posix(), gruppi_anno
-        )
-        destinazione = PROCESSED / "procapite" / f"{anno}.parquet"
+        tabelle = {
+            nome: (PROCESSED / nome / f"{anno}.parquet").as_posix() for nome in TABELLE_ANNO
+        }
+        posizioni, confronti_anno = calcola_anno(tabelle, gruppi_anno, precedente)
+        destinazione = PROCESSED / "posizioni" / f"{anno}.parquet"
         destinazione.parent.mkdir(exist_ok=True)
-        procapite.to_parquet(destinazione, index=False)
+        posizioni.to_parquet(destinazione, index=False)
         confronti.append(confronti_anno)
-        log.info("confronti %d: %d valori pro capite", anno, len(procapite))
+        precedente = posizioni
+        log.info("confronti %d: %d valori", anno, len(posizioni))
     gruppi.to_parquet(PROCESSED / "gruppi.parquet", index=False)
     dimensione_gruppi(gruppi).to_parquet(PROCESSED / "dimensione_gruppi.parquet", index=False)
     pd.concat(confronti).to_parquet(PROCESSED / "confronti.parquet", index=False)

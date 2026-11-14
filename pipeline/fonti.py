@@ -26,6 +26,13 @@ URL_VARIAZIONI = (
     "Variazioni-amministrative-e-territoriali-dal-1991.zip"
 )
 URL_INDICEPA = "https://indicepa.gov.it/ipa-dati/api/3/action/package_show?id=enti"
+# IPCA (indice armonizzato dei prezzi al consumo) dell'Italia, media annua: lo calcola ISTAT,
+# lo distribuisce Eurostat, la cui API risponde mentre quella SDMX di ISTAT no
+URL_IPCA = (
+    "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/prc_hicp_aind"
+    "?geo=IT&coicop=CP00&unit=INX_A_AVG"
+)
+EXPORT = RADICE / "data" / "export"
 
 
 def url_rendiconto(anno: int, pacchetto: str) -> str:

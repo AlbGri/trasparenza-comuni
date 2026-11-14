@@ -1,0 +1,56 @@
+codice;unita;nota
+01.01;percentuale;
+02.01;percentuale;
+02.02;percentuale;
+02.03;percentuale;
+02.04;percentuale;
+02.05;percentuale;
+02.06;percentuale;
+02.07;percentuale;
+02.08;percentuale;
+03.01;percentuale;
+03.02;percentuale;
+04.01;percentuale;
+04.02;percentuale;
+04.03;percentuale;
+04.04;euro per abitante;calcolato dal comune sui residenti al 1 gennaio dell'anno di bilancio, non dell'anno dopo come le voci pro capite calcolate qui
+05.01;percentuale;
+06.01;percentuale;
+06.02;percentuale;
+06.03;percentuale;
+07.01;percentuale;
+07.02;euro per abitante;calcolato dal comune sui residenti al 1 gennaio dell'anno di bilancio, non dell'anno dopo come le voci pro capite calcolate qui
+07.03;euro per abitante;calcolato dal comune sui residenti al 1 gennaio dell'anno di bilancio, non dell'anno dopo come le voci pro capite calcolate qui
+07.04;euro per abitante;calcolato dal comune sui residenti al 1 gennaio dell'anno di bilancio, non dell'anno dopo come le voci pro capite calcolate qui
+07.05;percentuale;
+07.06;percentuale;
+07.07;percentuale;
+08.01;percentuale;
+08.02;percentuale;
+08.03;percentuale;
+08.04;percentuale;
+08.05;percentuale;
+08.06;percentuale;
+09.01;percentuale;
+09.02;percentuale;
+09.03;percentuale;
+09.04;percentuale;
+09.05;giorni;giorni medi fra scadenza e pagamento delle fatture, pesati sugli importi, negativo se si paga prima della scadenza
+10.01;percentuale;
+10.02;percentuale;
+10.03;percentuale;
+10.04;euro per abitante;calcolato dal comune sui residenti al 1 gennaio dell'anno di bilancio, non dell'anno dopo come le voci pro capite calcolate qui
+11.01;percentuale;
+11.02;percentuale;
+11.03;percentuale;
+11.04;percentuale;
+12.01;percentuale;
+12.02;percentuale;
+12.03;percentuale;
+12.04;percentuale;
+13.01;percentuale;
+13.02;percentuale;
+13.03;percentuale;
+14.01;percentuale;
+15.01;percentuale;
+15.02;percentuale;

@@ -35,6 +35,7 @@ class Tabella:
         chiavi: nome uniforme -> colonna del CSV (testo).
         importi: nome uniforme -> colonna del CSV (numero decimale).
         calcolate: nome uniforme -> espressione SQL sulle colonne del CSV.
+        testi: nome uniforme -> colonna del CSV con la descrizione di un codice.
         dal: primo anno in cui il file esiste.
     """
 
@@ -43,6 +44,7 @@ class Tabella:
     chiavi: dict[str, str]
     importi: dict[str, str] = field(default_factory=dict)
     calcolate: dict[str, str] = field(default_factory=dict)
+    testi: dict[str, str] = field(default_factory=dict)
     dal: int = 2016
 
 
@@ -65,6 +67,11 @@ TABELLE = {
             + " OR "
             + _in("Codice Titolo Spese Arconet", TITOLI_SPESA_ESCLUSI)
         },
+        testi={
+            "desc_missione": "Desc Missione Arconet",
+            "desc_programma": "Desc Programma Arconet",
+            "desc_titolo": "Desc Titolo Spese Arconet",
+        },
     ),
     "entrate": Tabella(
         pacchetto="Schemi di bilancio",
@@ -75,12 +82,19 @@ TABELLE = {
         },
         importi={"accertamenti": "Accert. in CC", "riscossioni_totali": "Tot. Riscos."},
         calcolate={"esclusa": _in("Codice Titolo Entrata Arconet", TITOLI_ENTRATA_ESCLUSI)},
+        testi={
+            "desc_titolo": "Desc Titolo Entrata Arconet",
+            "desc_tipologia": "Desc Tipologia Entrata Arconet",
+        },
     ),
+    # `Residui` e `Competenza di Gestione` sono riempite solo per riscossioni, pagamenti e
+    # residui, e li' sommano al totale: il valore di ogni voce e' `Totale di Gestione`.
     "risultato": Tabella(
         pacchetto="Schemi di bilancio",
         file="SDB Allegato A Risultato di Amministrazione.csv",
         chiavi={"voce": "Cod Voce Ris Amm Rend"},
         importi={"valore": "Totale di Gestione"},
+        testi={"desc_voce": "Desc Voce Ris Amm Rend"},
     ),
     "parametri": Tabella(
         pacchetto="Schemi di bilancio",
@@ -90,6 +104,7 @@ TABELLE = {
             "esito": """CASE "Valore Parametro Deficitarietà"
                 WHEN 'SI' THEN true WHEN 'NO' THEN false END"""
         },
+        testi={"desc_parametro": "Parametro Deficitario"},
         dal=2019,
     ),
     "indicatori_ufficiali": Tabella(
@@ -100,6 +115,27 @@ TABELLE = {
             "indicatore": "Codice Indicatore Sintetico 2)a",
         },
         importi={"valore": "Indicatore Tutte Le Missioni"},
+        testi={
+            "desc_gruppo": "Descrizione Tipologia Indicatore Sintetico 2)a",
+            "desc_indicatore": "Descrizione Indicatore Sintetico 2)a",
+            "definizione": "Definizione Indicatore Sintetico 2)a",
+        },
+    ),
+}
+
+# Descrizioni dei codici: campo -> (tabella, espressione del codice, colonna della descrizione).
+# Programmi e tipologie si ripetono sotto missioni e titoli diversi: il codice li unisce.
+CODICI = {
+    "missione": ("spese", "missione", "desc_missione"),
+    "programma": ("spese", "missione || programma", "desc_programma"),
+    "titolo_spesa": ("spese", "titolo", "desc_titolo"),
+    "titolo_entrata": ("entrate", "titolo", "desc_titolo"),
+    "tipologia_entrata": ("entrate", "titolo || tipologia", "desc_tipologia"),
+    "voce_risultato": ("risultato", "voce", "desc_voce"),
+    "parametro": ("parametri", "parametro", "desc_parametro"),
+    "gruppo_indicatori": ("indicatori_ufficiali", "gruppo", "desc_gruppo"),
+    "indicatore": (
+        "indicatori_ufficiali", "gruppo || '.' || indicatore", "desc_indicatore", "definizione"
     ),
 }
 
@@ -148,6 +184,7 @@ def converti(csv: Path, tabella: Tabella, destinazione: Path) -> None:
     presenti = set(con.sql(f"SELECT * FROM {origine} LIMIT 0").columns)
     attese = {"Esercizio Finanziario", "Codice Tipologia Soggetto", "CF Soggetto"}
     attese |= set(tabella.chiavi.values()) | set(tabella.importi.values())
+    attese |= set(tabella.testi.values())
     if attese - presenti:
         raise ValueError(f"{csv.name}: colonne mancanti {sorted(attese - presenti)}")
 
@@ -158,6 +195,11 @@ def converti(csv: Path, tabella: Tabella, destinazione: Path) -> None:
         for nome, origine_ in tabella.importi.items()
     ]
     colonne += [f"{espressione} AS {nome}" for nome, espressione in tabella.calcolate.items()]
+    # le definizioni degli indicatori sono riempite di spazi fino a lunghezza fissa
+    colonne += [
+        f"""regexp_replace(trim("{origine_}"), '\\s+', ' ', 'g') AS {nome}"""
+        for nome, origine_ in tabella.testi.items()
+    ]
     chiave = ", ".join(["cf", "anno", *tabella.chiavi])
     con.execute(
         f"""CREATE TABLE righe AS SELECT {", ".join(colonne)} FROM {origine}
@@ -181,6 +223,32 @@ def converti_soggetti(csv: Path, destinazione: Path) -> None:
         CAST("Esercizio Finanziario" AS SMALLINT) AS anno, {colonne}
         FROM {_leggi(csv)} WHERE "Codice Tipologia Soggetto" = '{TIPO_COMUNE}' ORDER BY cf"""
     _scrivi(duckdb.connect(), query, destinazione)
+
+
+def scrivi_codici(cartella: Path = PROCESSED) -> None:
+    """Scrive `codici.parquet`: descrizione di ogni codice, presa dall'ultimo anno che lo usa.
+
+    Dentro un anno vale la descrizione piu' frequente. Colonne: campo, codice, descrizione,
+    definizione (solo per gli indicatori), anno.
+    """
+    con = duckdb.connect()
+    parti = []
+    for campo, (tabella, codice, descrizione, *definizione) in CODICI.items():
+        if not any((cartella / tabella).glob("*.parquet")):
+            continue
+        file = (cartella / tabella / "*.parquet").as_posix()
+        testo_definizione = definizione[0] if definizione else "NULL::VARCHAR"
+        parti.append(f"""
+            SELECT '{campo}' AS campo, {codice} AS codice, {descrizione} AS descrizione,
+                {testo_definizione} AS definizione, anno, count(*) AS righe
+            FROM read_parquet('{file}') GROUP BY ALL""")
+    query = f"""
+        SELECT campo, codice, descrizione, definizione, anno
+        FROM ({" UNION ALL ".join(parti)})
+        QUALIFY row_number() OVER (
+            PARTITION BY campo, codice ORDER BY anno DESC, righe DESC, descrizione) = 1
+        ORDER BY campo, codice"""
+    _scrivi(con, query, cartella / "codici.parquet")
 
 
 def aggiorna(anni: range, registro: Registro, sessione: requests.Session) -> int:
@@ -211,4 +279,6 @@ def aggiorna(anni: range, registro: Registro, sessione: requests.Session) -> int
                     converti(csv, tabella, destinazione)
                 registro.registra(indirizzo, zip_remoto.etag, zip_remoto.data_file)
                 convertiti += 1
+    if convertiti or not (PROCESSED / "codici.parquet").exists():
+        scrivi_codici()
     return convertiti

@@ -35,7 +35,7 @@ codice;unita;nota
 09.02;percentuale;
 09.03;percentuale;
 09.04;percentuale;
-09.05;giorni;giorni medi fra scadenza e pagamento delle fatture, pesati sugli importi, negativo se si paga prima della scadenza
+09.05;giorni;giorni medi fra scadenza e pagamento delle fatture, pesati sugli importi, negativo se si paga prima della scadenza. Si mostrano solo i valori fra -60 e 365 giorni diversi da zero: gli altri sono non compilati o fuori scala
 10.01;percentuale;
 10.02;percentuale;
 10.03;percentuale;

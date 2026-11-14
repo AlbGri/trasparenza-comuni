@@ -104,10 +104,13 @@ def test_pro_capite_zeri_e_posizioni():
         "valore": [Decimal("-500"), Decimal("200")],
     })
     # 4.4 a zero: per a il 4.1 e' positivo (non compilato), per b il 4.1 manca (resta zero)
+    # 9.5: zero (a) e fuori scala (b) vuoti, -12 giorni (c) valido
     indicatori = pd.DataFrame({
-        "cf": ["a", "b", "c", "a", "b"], "gruppo": "04",
-        "indicatore": ["01", "01", "01", "04", "04"],
-        "valore": [Decimal("20"), None, Decimal("30"), Decimal("0"), Decimal("0")],
+        "cf": ["a", "b", "c", "a", "b", "a", "b", "c"],
+        "gruppo": ["04"] * 5 + ["09"] * 3,
+        "indicatore": ["01", "01", "01", "04", "04", "05", "05", "05"],
+        "valore": [Decimal(v) if v else None
+                   for v in ("20", None, "30", "0", "0", "0", "-1200", "-12")],
     })
     tabelle = {
         "spese": spese, "entrate": entrate, "risultato": risultato,
@@ -125,6 +128,7 @@ def test_pro_capite_zeri_e_posizioni():
     # l'indicatore vuoto di b resta fuori, non vale zero
     assert valori.loc[("indicatore", "04.01"), "valore"].tolist() == [20.0, 30.0]
     assert valori.loc[("indicatore", "04.04")].index.tolist() == ["b"]
+    assert valori.loc[("indicatore", "09.05")].index.tolist() == ["c"]
     corrente = confronti.set_index(["misura", "codice"]).loc[("spesa_titolo", "01")]
     assert (corrente["comuni"], corrente["mediana"], corrente["ambito"]) == (3, 1.0, "Centro")
 

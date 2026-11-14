@@ -64,6 +64,9 @@ TABELLE_ANNO = ("spese", "entrate", "risultato", "indicatori_ufficiali")
 # debito. Zero con il gemello positivo = popolazione non compilata dal comune: il valore si
 # tratta come assente (FONTI 1, Piano degli indicatori).
 GEMELLI = {"04.04": "04.01", "07.04": "07.01", "10.04": "10.03"}
+# Giorni di ritardo dei pagamenti (9.5) plausibili. Sotto i -60 si pagherebbe prima della
+# fattura (sono giorni scritti per 100); lo zero esatto e' un campo non compilato.
+TEMPESTIVITA = ("09.05", -60, 365)
 
 
 def residenti_per_ente(enti: pd.DataFrame, popolazione: pd.DataFrame) -> pd.DataFrame:
@@ -228,6 +231,8 @@ def calcola_anno(
             LEFT JOIN gemelli USING (codice)
             LEFT JOIN codificati t ON t.cf = i.cf AND t.codice = gemelli.gemello
             WHERE NOT coalesce(i.valore = 0 AND t.valore > 0, false)
+                AND NOT (i.codice = '{TEMPESTIVITA[0]}' AND (i.valore = 0
+                    OR i.valore NOT BETWEEN {TEMPESTIVITA[1]} AND {TEMPESTIVITA[2]}))
         )
         SELECT u.cf, u.misura, u.codice, u.importo, u.valore,
             CASE WHEN u.misura IN {MISURE_CON_ANDAMENTO} AND p.valore > 0

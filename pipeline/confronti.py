@@ -60,6 +60,10 @@ MISURE_CON_ANDAMENTO = (
     "entrate_proprie",
 )
 TABELLE_ANNO = ("spese", "entrate", "risultato", "indicatori_ufficiali")
+# Indicatori ufficiali pro capite -> indicatore gemello sulla stessa spesa o sullo stesso
+# debito. Zero con il gemello positivo = popolazione non compilata dal comune: il valore si
+# tratta come assente (FONTI 1, Piano degli indicatori).
+GEMELLI = {"04.04": "04.01", "07.04": "07.01", "10.04": "10.03"}
 
 
 def residenti_per_ente(enti: pd.DataFrame, popolazione: pd.DataFrame) -> pd.DataFrame:
@@ -213,10 +217,17 @@ def calcola_anno(
             JOIN gruppi g ON g.cf = p.cf
             LEFT JOIN voci v ON v.cf = p.cf AND v.misura = e.misura AND v.codice = e.codice
         ),
-        ufficiali AS (
-            SELECT cf, 'indicatore' AS misura, gruppo || '.' || indicatore AS codice,
-                NULL::DOUBLE AS importo, valore::DOUBLE AS valore
+        codificati AS (
+            SELECT cf, gruppo || '.' || indicatore AS codice, valore::DOUBLE AS valore
             FROM indicatori_ufficiali WHERE valore IS NOT NULL
+        ),
+        gemelli (codice, gemello) AS (VALUES {", ".join(map(str, GEMELLI.items()))}),
+        ufficiali AS (
+            SELECT i.cf, 'indicatore' AS misura, i.codice, NULL::DOUBLE AS importo, i.valore
+            FROM codificati i
+            LEFT JOIN gemelli USING (codice)
+            LEFT JOIN codificati t ON t.cf = i.cf AND t.codice = gemelli.gemello
+            WHERE NOT coalesce(i.valore = 0 AND t.valore > 0, false)
         )
         SELECT u.cf, u.misura, u.codice, u.importo, u.valore,
             CASE WHEN u.misura IN {MISURE_CON_ANDAMENTO} AND p.valore > 0

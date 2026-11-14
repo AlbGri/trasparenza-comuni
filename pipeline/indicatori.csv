@@ -13,7 +13,7 @@ codice;unita;nota
 04.01;percentuale;
 04.02;percentuale;
 04.03;percentuale;
-04.04;euro per abitante;calcolato dal comune sui residenti al 1 gennaio dell'anno di bilancio, non dell'anno dopo come le voci pro capite calcolate qui
+04.04;euro per abitante;calcolato dal comune sui residenti al 1 gennaio dell'anno di bilancio, non dell'anno dopo come le voci pro capite calcolate qui. Uno zero con il 4.1 positivo vuol dire popolazione non compilata e il valore si tratta come assente
 05.01;percentuale;
 06.01;percentuale;
 06.02;percentuale;
@@ -21,7 +21,7 @@ codice;unita;nota
 07.01;percentuale;
 07.02;euro per abitante;calcolato dal comune sui residenti al 1 gennaio dell'anno di bilancio, non dell'anno dopo come le voci pro capite calcolate qui
 07.03;euro per abitante;calcolato dal comune sui residenti al 1 gennaio dell'anno di bilancio, non dell'anno dopo come le voci pro capite calcolate qui
-07.04;euro per abitante;calcolato dal comune sui residenti al 1 gennaio dell'anno di bilancio, non dell'anno dopo come le voci pro capite calcolate qui
+07.04;euro per abitante;calcolato dal comune sui residenti al 1 gennaio dell'anno di bilancio, non dell'anno dopo come le voci pro capite calcolate qui. Uno zero con il 7.1 positivo vuol dire popolazione non compilata e il valore si tratta come assente
 07.05;percentuale;
 07.06;percentuale;
 07.07;percentuale;
@@ -39,7 +39,7 @@ codice;unita;nota
 10.01;percentuale;
 10.02;percentuale;
 10.03;percentuale;
-10.04;euro per abitante;calcolato dal comune sui residenti al 1 gennaio dell'anno di bilancio, non dell'anno dopo come le voci pro capite calcolate qui
+10.04;euro per abitante;calcolato dal comune sui residenti al 1 gennaio dell'anno di bilancio, non dell'anno dopo come le voci pro capite calcolate qui. Uno zero con il 10.3 positivo vuol dire popolazione non compilata e il valore si tratta come assente
 11.01;percentuale;
 11.02;percentuale;
 11.03;percentuale;

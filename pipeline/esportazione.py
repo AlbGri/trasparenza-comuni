@@ -68,26 +68,67 @@ def _scrivi_json(percorso: Path, dati: dict) -> int:
     return len(testo.encode("utf-8"))
 
 
-def _voci_comune(righe: pd.DataFrame, anni: list[int]) -> dict:
-    """Serie delle voci di un comune, da posizioni unite alla mediana del gruppo."""
+def _arrotonda(colonna: pd.Series, decimali: int | None) -> list:
+    """Come `_serie`, ma su una colonna intera."""
+    if decimali is None:
+        return [None if v != v else int(round(v)) for v in colonna.tolist()]
+    return [None if v != v else round(v, decimali) for v in colonna.tolist()]
+
+
+def voci_per_comune(righe: pd.DataFrame, anni: list[int]) -> dict[str, dict]:
+    """Serie delle voci di ogni comune, da posizioni unite alla mediana del gruppo.
+
+    Raises:
+        ValueError: se un comune ha due righe per la stessa voce e lo stesso anno.
+    """
+    chiavi = ["cf", "misura", "codice", "anno"]
+    if righe.duplicated(chiavi).any():
+        raise ValueError("righe ripetute per comune, voce e anno")
+    righe = righe.sort_values(chiavi)
+    euro = {
+        "importo": _arrotonda(righe["importo"], 2),
+        "procapite": _arrotonda(righe["valore"], None),
+        "posizione": _arrotonda(righe["posizione"], None),
+        "mediana": _arrotonda(righe["mediana"], None),
+        "scarto": _arrotonda(righe["scarto"], 1),
+    }
+    indicatore = euro | {
+        "valore": _arrotonda(righe["valore"], 2), "mediana": _arrotonda(righe["mediana"], 2),
+    }
+    posto = {anno: i for i, anno in enumerate(anni)}
     voci = {}
-    for (misura, codice), voce in righe.groupby(["misura", "codice"], sort=True):
-        per_anno = voce.set_index("anno")
-        if misura == "indicatore":
-            serie = {"valore": _serie(per_anno["valore"].to_dict(), anni, 2)}
-            mediana = _serie(per_anno["mediana"].to_dict(), anni, 2)
-        else:
-            serie = {
-                "importo": _serie(per_anno["importo"].to_dict(), anni, 2),
-                "procapite": _serie(per_anno["valore"].to_dict(), anni, None),
-            }
-            mediana = _serie(per_anno["mediana"].to_dict(), anni, None)
-        serie["posizione"] = _serie(per_anno["posizione"].to_dict(), anni, None)
-        serie["mediana"] = mediana
-        if misura in MISURE_CON_ANDAMENTO:
-            serie["scarto"] = _serie(per_anno["scarto"].to_dict(), anni, 1)
-        voci[f"{misura}/{codice}"] = serie
+    for riga, (cf, misura, codice, anno) in enumerate(
+        zip(righe["cf"], righe["misura"], righe["codice"], righe["anno"].tolist())
+    ):
+        if anno not in posto:
+            continue
+        suoi = voci.setdefault(cf, {})
+        chiave = f"{misura}/{codice}"
+        if chiave not in suoi:
+            campi = ["valore"] if misura == "indicatore" else ["importo", "procapite"]
+            campi += ["posizione", "mediana"]
+            if misura in MISURE_CON_ANDAMENTO:
+                campi.append("scarto")
+            suoi[chiave] = {campo: [None] * len(anni) for campo in campi}
+        sorgente = indicatore if misura == "indicatore" else euro
+        for campo, serie in suoi[chiave].items():
+            serie[posto[anno]] = sorgente[campo][riga]
     return voci
+
+
+def _parametri_per_comune(parametri: pd.DataFrame) -> tuple[dict, dict]:
+    """Parametri accesi e giudizio di deficitarieta' per comune e anno.
+
+    Un anno conta solo se c'e' la sintesi (parametro 0010), che da' il giudizio.
+    """
+    sintesi = parametri[parametri["parametro"] == "0010"].drop_duplicates(["cf", "anno"])
+    deficitario = {
+        (cf, anno): bool(esito)
+        for cf, anno, esito in zip(sintesi["cf"], sintesi["anno"].tolist(), sintesi["esito"])
+    }
+    accesi = parametri[parametri["esito"] & (parametri["parametro"] != "0010")]
+    accesi = accesi.groupby(["cf", "anno"])["parametro"].apply(sorted).to_dict()
+    return accesi, deficitario
 
 
 def _nome_indicatore(descrizione: str) -> str:
@@ -253,10 +294,10 @@ def esporta(cartella: Path = PROCESSED, uscita: Path = EXPORT) -> int:
     (uscita / "comuni").mkdir(parents=True)
     (uscita / "gruppi").mkdir()
     peso = 0
-    per_cf = dict(tuple(righe.groupby("cf")))
+    voci_cf = voci_per_comune(righe, anni)
+    accesi_cf, deficitario_cf = _parametri_per_comune(parametri)
     gruppi_cf = dict(tuple(gruppi.groupby("cf")))
     consegne_cf = dict(tuple(consegne.groupby("cf")))
-    parametri_cf = dict(tuple(parametri.groupby("cf")))
     indice = []
     for ente in enti.itertuples():
         comune = {
@@ -270,22 +311,12 @@ def esporta(cartella: Path = PROCESSED, uscita: Path = EXPORT) -> int:
         suoi_gruppi = gruppi_cf.get(ente.cf, gruppi.iloc[:0]).set_index("anno")
         comune["residenti"] = _serie(suoi_gruppi["residenti"].to_dict(), anni, None)
         comune["gruppo"] = [suoi_gruppi["gruppo"].to_dict().get(anno) for anno in anni]
-        comune["voci"] = _voci_comune(per_cf.get(ente.cf, righe.iloc[:0]), anni)
-        accesi, deficitario = [], []
-        suoi_parametri = parametri_cf.get(ente.cf, parametri.iloc[:0])
-        for anno in anni:
-            dell_anno = suoi_parametri[suoi_parametri["anno"] == anno]
-            sintesi = dell_anno[dell_anno["parametro"] == "0010"]
-            if sintesi.empty:
-                accesi.append(None)
-                deficitario.append(None)
-                continue
-            accesi.append(sorted(dell_anno.loc[
-                dell_anno["esito"] & (dell_anno["parametro"] != "0010"), "parametro"
-            ]))
-            deficitario.append(bool(sintesi["esito"].iloc[0]))
-        comune["parametri_accesi"] = accesi
-        comune["deficitario"] = deficitario
+        comune["voci"] = voci_cf.get(ente.cf, {})
+        comune["parametri_accesi"] = [
+            accesi_cf.get((ente.cf, anno), []) if (ente.cf, anno) in deficitario_cf else None
+            for anno in anni
+        ]
+        comune["deficitario"] = [deficitario_cf.get((ente.cf, anno)) for anno in anni]
         peso += _scrivi_json(uscita / "comuni" / f"{ente.codice_istat}.json", comune)
         ultimi = [r for r in comune["residenti"] if r is not None]
         indice.append([

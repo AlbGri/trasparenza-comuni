@@ -2,7 +2,7 @@
 import pandas as pd
 import pytest
 
-from pipeline.esportazione import _serie, dizionario, identificativo_gruppo
+from pipeline.esportazione import _serie, dizionario, identificativo_gruppo, voci_per_comune
 from pipeline.prezzi import leggi_jsonstat
 
 
@@ -54,3 +54,30 @@ def test_dizionario(codici):
 def test_dizionario_senza_descrizione(codici):
     with pytest.raises(ValueError, match="manca la descrizione"):
         dizionario(codici, ["spesa_titolo/01"])
+
+
+def test_voci_per_comune():
+    righe = pd.DataFrame({
+        "cf": ["A", "A", "A", "B"],
+        "anno": [2017, 2016, 2016, 2016],
+        "misura": ["spesa_titolo", "spesa_titolo", "indicatore", "spesa_titolo"],
+        "codice": ["01", "01", "09.05", "01"],
+        "importo": [1000.456, 900.0, float("nan"), 50.0],
+        "valore": [10.6, 9.4, 12.345, 0.5],
+        "posizione": [50.4, 40.0, 70.0, 10.0],
+        "scarto": [12.34, float("nan"), float("nan"), float("nan")],
+        "mediana": [11.2, 9.0, 5.555, float("nan")],
+    })
+    voci = voci_per_comune(righe, [2016, 2017, 2018])
+    assert list(voci["A"]) == ["indicatore/09.05", "spesa_titolo/01"]
+    assert voci["A"]["spesa_titolo/01"] == {
+        "importo": [900.0, 1000.46, None], "procapite": [9, 11, None],
+        "posizione": [40, 50, None], "mediana": [9, 11, None], "scarto": [None, 12.3, None],
+    }
+    assert voci["A"]["indicatore/09.05"] == {
+        "valore": [12.35, None, None], "posizione": [70, None, None],
+        "mediana": [5.55, None, None],
+    }
+    assert voci["B"]["spesa_titolo/01"]["mediana"] == [None, None, None]
+    with pytest.raises(ValueError, match="ripetute"):
+        voci_per_comune(pd.concat([righe, righe.head(1)]), [2016, 2017])

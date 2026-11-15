@@ -1,22 +1,22 @@
-"""Comando della pipeline: `python -m pipeline [passi] [--anni 2016-2025]`.
+"""Comando della pipeline: `python -m pipeline [passi] [--anni 2016-2025] [--comuni ...]`.
 
 Senza argomenti esegue tutti i passi. Un passo salta cio' che alla fonte non e' cambiato. A
 fine lancio confronta i numeri di controllo con quelli attesi; se uno non torna esce con
-codice 1.
+codice 1 e il sito non si genera.
 """
 import argparse
 import logging
 import sys
 
 from pipeline import (
-    anagrafica, confronti, controlli, esportazione, popolazione, prezzi, rendiconti,
+    anagrafica, confronti, controlli, esportazione, popolazione, prezzi, rendiconti, sito,
 )
 from pipeline.fonti import PRIMO_ANNO, url_rendiconto
 from pipeline.scarico import Registro, anni_pubblicati, nuova_sessione
 
 log = logging.getLogger("pipeline")
 
-PASSI = ["rendiconti", "anagrafica", "popolazione", "prezzi", "confronti", "esportazione"]
+PASSI = ["rendiconti", "anagrafica", "popolazione", "prezzi", "confronti", "esportazione", "sito"]
 
 
 def _anni(testo: str) -> range:
@@ -33,6 +33,11 @@ def main() -> None:
         type=_anni,
         help="anni dei rendiconti da aggiornare: uno solo o un intervallo, es. 2016-2025 "
         "(senza, tutti quelli pubblicati da OpenBDAP)",
+    )
+    parser.add_argument(
+        "--comuni",
+        type=lambda testo: testo.split(","),
+        help="codici ISTAT separati da virgole: il sito genera solo queste pagine",
     )
     argomenti = parser.parse_args()
     if sconosciuti := set(argomenti.passi) - set(PASSI):
@@ -66,6 +71,9 @@ def main() -> None:
         log.info("esportazione: %s", "riscritta" if riscritta else "invariata")
     if not controlli.esegui():
         sys.exit(1)
+    if "sito" in argomenti.passi:
+        scritto = sito.aggiorna(argomenti.comuni)
+        log.info("sito: %s", "generato" if scritto else "invariato")
 
 
 if __name__ == "__main__":

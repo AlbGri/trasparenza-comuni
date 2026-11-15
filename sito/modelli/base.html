@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titolo %}{% endblock %} - Trasparenza comuni</title>
+<meta name="description" content="{% block descrizione %}{% endblock %}">
+<link rel="stylesheet" href="{{ radice }}statico/stile.css">
+{% block testa %}{% endblock %}
+</head>
+<body>
+<header class="barra">
+  <div class="largo barra-dentro">
+    <a class="marchio" href="{{ radice }}">Trasparenza comuni</a>
+    <button type="button" class="lingua" aria-pressed="true" title="Lingua: italiano">IT</button>
+  </div>
+</header>
+<main class="largo">
+{% block contenuto %}{% endblock %}
+</main>
+<footer class="piede">
+  <div class="largo">
+    <p>Trasparenza comuni: osservatorio civico sui bilanci dei comuni italiani, fatto con i dati
+      pubblici di OpenBDAP (Ragioneria Generale dello Stato) e ISTAT. Progetto indipendente, non
+      collegato alla Ragioneria Generale dello Stato né ad altri enti pubblici.</p>
+    <p><a href="{{ radice }}metodo/">Come sono fatti questi numeri</a> ·
+      {% block segnala %}<a href="{{ segnala }}">Segnala un errore</a>{% endblock %} ·
+      <a href="https://github.com/AlbGri/trasparenza-comuni">Codice sorgente</a></p>
+  </div>
+</footer>
+{% block script %}{% endblock %}
+</body>
+</html>

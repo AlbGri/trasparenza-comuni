@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% macro misura(r) %}
+<div class="misura">
+  <h3>{{ r.nome }}</h3>
+  <p class="valore">{{ r.testo }}{% if r.unita == "euro per abitante" %} <small>per abitante</small>{% elif r.unita == "euro" %} <small>in totale</small>{% endif %}</p>
+  {% if r.posizione is not none %}
+  <p class="confronto">Mediana dei comuni simili: {{ r.mediana|con_unita(r.unita) }}</p>
+  <div class="scala" role="img" aria-label="{{ r.posizione|sopra }}">
+    <span class="segno-mediana"></span><span class="segno" style="left: {{ r.posizione }}%"></span>
+  </div>
+  <div class="scala-legenda" aria-hidden="true"><span>più basso</span><span>mediana</span><span>più alto</span></div>
+  <p class="confronto">{{ r.posizione|sopra }}</p>
+  {% endif %}
+  <details>
+    <summary>Che cosa misura</summary>
+    {% if r.nome != r.nome_ufficiale %}<p>Voce: {{ r.nome_ufficiale }}.</p>{% endif %}
+    {% if r.spiegazione %}<p>{{ r.spiegazione[:1]|upper }}{{ r.spiegazione[1:] }}.</p>{% endif %}
+    {% if r.importo is not none and r.unita != "euro" %}<p>Importo totale: {{ r.importo|numero }} €.</p>{% endif %}
+    <p>Dato: {{ r.misura }}. Fonte: {{ r.fonte }}.</p>
+  </details>
+</div>
+{% endmacro %}
+{% macro tabella(righe, intestazione, senza_residenti) %}
+<div class="scorre">
+<table>
+  {% if senza_residenti %}
+  <thead><tr><th scope="col">{{ intestazione }}</th><th scope="col">Importo totale</th></tr></thead>
+  {% else %}
+  <thead><tr><th scope="col">{{ intestazione }}</th><th scope="col">Per abitante</th><th scope="col">Mediana comuni simili</th><th scope="col">Sopra il … dei comuni simili</th></tr></thead>
+  {% endif %}
+  <tbody>
+  {% for r in righe %}
+    <tr><th scope="row">{{ r.nome }}</th><td>{{ r.testo }}</td>
+      {% if not senza_residenti %}<td>{{ r.mediana|con_unita(r.unita) }}</td><td>{{ r.posizione }}%</td>{% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endmacro %}
+
+{% block titolo %}Bilancio del Comune di {{ c.nome }}{% endblock %}
+{% block descrizione %}Rendiconti del Comune di {{ c.nome }} ({{ c.provincia }}) dal {{ c.anni[0] }} al {{ c.anni[-1] }}: spesa, entrate, indicatori ufficiali e confronto con i comuni simili.{% endblock %}
+{% block segnala %}<a href="{{ segnala }}?title={{ ('Errore nella pagina di ' ~ c.nome ~ ' (' ~ c.id ~ ')')|urlencode }}">Segnala un errore</a>{% endblock %}
+
+{% block contenuto %}
+<section class="identita">
+  <p class="sopratitolo">{{ c.provincia }} · {{ c.regione }}</p>
+  <h1>Comune di {{ c.nome }}</h1>
+  {% if c.stato == "estinto" %}
+  <p class="avviso">Questo comune non esiste più{% if c.successore in collegati %}: è confluito nel Comune di
+    <a href="{{ radice }}{{ collegati[c.successore].indirizzo }}/">{{ collegati[c.successore].nome }}</a>{% endif %}.</p>
+  {% endif %}
+  {% if c.predecessori %}
+  <p>Nato dalla fusione dei comuni di
+    {% for p in c.predecessori if p in collegati %}<a href="{{ radice }}{{ collegati[p].indirizzo }}/">{{ collegati[p].nome }}</a>{{ ", " if not loop.last }}{% endfor %}.</p>
+  {% endif %}
+  <dl class="dati-ente">
+    {% if residenti %}<div><dt>Residenti al 1° gennaio {{ anno + 1 }}</dt><dd>{{ residenti|numero }}</dd></div>{% endif %}
+    {% if gruppo %}<div><dt>Confrontato con</dt><dd>{{ gruppo.descrizione }}: {{ gruppo.consegnati|numero }} con il rendiconto {{ anno }}</dd></div>{% endif %}
+    <div><dt>Codice ISTAT</dt><dd>{{ c.id }}</dd></div>
+    <div><dt>Codice fiscale</dt><dd>{{ c.codice_fiscale }}</dd></div>
+  </dl>
+</section>
+
+<section>
+  <h2>Rendiconti consegnati</h2>
+  <p>Il rendiconto è il bilancio consuntivo dell'anno: dice quanto il comune ha speso e incassato. Va inviato alla banca dati della Ragioneria Generale dello Stato entro la primavera dell'anno dopo, salvo proroghe.</p>
+  <ul class="consegne">
+  {% for anno_c, stato in consegne %}
+    <li class="{{ stato|replace(' ', '-') }}"><span>{{ anno_c }}</span> {{ stato }}</li>
+  {% endfor %}
+  </ul>
+</section>
+
+{% if anno is none %}
+<section><p>Nessun rendiconto consegnato fra il {{ c.anni[0] }} e il {{ c.anni[-1] }}: non ci sono numeri da mostrare.</p></section>
+{% else %}
+
+{% if indicatori %}
+<section>
+  <h2>Indicatori ufficiali del rendiconto {{ anno }}</h2>
+  <p class="data-dati">Rendiconto {{ anno }}, dati OpenBDAP del {{ data_anno }}</p>
+  <p>Calcolati e certificati dal comune nel suo piano degli indicatori, riportati come sono stati scritti. {% if gruppo %}Accanto, la mediana dei {{ gruppo.descrizione }} e la quota di questi comuni con un valore più basso.{% endif %}</p>
+  <div class="scorre">
+  <table>
+    <thead><tr><th scope="col">Indicatore</th><th scope="col">Valore</th><th scope="col">Mediana comuni simili</th><th scope="col">Sopra il … dei comuni simili</th></tr></thead>
+    <tbody>
+    {% for r in indicatori %}
+      <tr><th scope="row">{{ r.nome }}</th>
+        <td>{{ r.testo }}{% if r.unita == "euro per abitante" %} <small>per ab.</small>{% endif %}</td>
+        <td>{{ r.mediana|con_unita(r.unita) if r.posizione is not none else "" }}</td>
+        <td>{{ r.posizione ~ "%" if r.posizione is not none else "" }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if debiti_zero %}<p class="nota">Debiti fuori bilancio (indicatori 13.1, 13.2 e 13.3): zero nel {{ anno }}.</p>{% endif %}
+  <details>
+    <summary>Che cosa misurano gli indicatori</summary>
+    <dl class="spiegazioni">
+    {% for r in indicatori %}
+      <dt>{{ r.nome }}</dt>
+      <dd>Nome ufficiale: {{ r.nome_ufficiale }}.{% if r.definizione %} Definizione: {{ r.definizione }}.{% endif %}{% if r.spiegazione %} Nota: {{ r.spiegazione }}.{% endif %}</dd>
+    {% endfor %}
+    </dl>
+    <p>Fonte: {{ indicatori[0].fonte }}.</p>
+  </details>
+</section>
+{% endif %}
+
+<section>
+  <h2>Numeri del rendiconto {{ anno }} calcolati da questo sito</h2>
+  <p class="data-dati">Rendiconto {{ anno }}, dati OpenBDAP del {{ data_anno }}</p>
+  {% if senza_residenti %}
+  <p>Per questo comune non ci sono i residenti ISTAT dell'anno: si mostrano gli importi totali, senza valori per abitante né confronto con i comuni simili.</p>
+  {% else %}
+  <p>Somme delle voci del rendiconto divise per i residenti. Spese ed entrate sono quelle di competenza dell'anno (impegni e accertamenti), non i pagamenti e gli incassi.</p>
+  {% endif %}
+  <div class="griglia">
+  {% for r in principali %}{{ misura(r) }}{% endfor %}
+  </div>
+</section>
+
+{% if missioni %}
+<section>
+  <h2>Spesa corrente per servizio, {{ anno }}</h2>
+  <p>Impegni di spesa corrente per missione del bilancio, dal più grande al più piccolo. Calcolati da questo sito.</p>
+  {{ tabella(missioni, "Servizio", senza_residenti) }}
+  {% if missioni_zero %}<p class="nota">Nessuna spesa corrente nel {{ anno }} per: {{ missioni_zero|join(", ") }}.</p>{% endif %}
+  {% if programmi %}
+  <h3>Alcuni servizi in dettaglio</h3>
+  {{ tabella(programmi, "Programma", senza_residenti) }}
+  {% endif %}
+</section>
+{% endif %}
+
+{% if entrate %}
+<section>
+  <h2>Entrate per titolo, {{ anno }}</h2>
+  <p>Accertamenti di competenza: le somme che il comune ha titolo a incassare nell'anno. Calcolati da questo sito.</p>
+  {{ tabella(entrate, "Entrata", senza_residenti) }}
+</section>
+{% endif %}
+{% endif %}
+
+{% if parametri.anni %}
+<section>
+  <h2>Salute finanziaria</h2>
+  <p>Parametri di deficitarietà strutturale, dichiarati dal comune nel rendiconto dal 2019. Un parametro acceso segnala una soglia superata; un comune con almeno metà dei parametri accesi è considerato strutturalmente deficitario.</p>
+  {% if parametri.righe %}
+  <div class="scorre">
+  <table class="parametri">
+    <thead><tr><th scope="col">Parametro</th>{% for a in parametri.anni %}<th scope="col">{{ a }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for riga in parametri.righe %}
+      <tr><th scope="row">{{ riga.testo }}</th>{% for acceso in riga.accesi %}<td>{{ "acceso" if acceso else "–" }}</td>{% endfor %}</tr>
+    {% endfor %}
+      <tr class="totale"><th scope="row">Ente strutturalmente deficitario</th>{% for d in parametri.deficitario %}<td>{{ "sì" if d else ("no" if d is not none else "n.d.") }}</td>{% endfor %}</tr>
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p>Nessun parametro acceso fra il {{ parametri.anni[0] }} e il {{ parametri.anni[-1] }}.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+<section>
+  <h2>Andamento negli anni</h2>
+  <p>Valori di ogni anno in euro correnti, senza correzione per l'inflazione, accanto alla mediana dei comuni simili di quell'anno.</p>
+  <label class="scelta" for="scelta-voce" hidden>Voce <select id="scelta-voce"></select></label>
+  <div id="grafico" class="grafico"></div>
+  <script type="application/json" id="dati-grafico">{{ grafico|tojson }}</script>
+  {% if andamento %}
+  <div class="scorre">
+  <table class="andamento">
+    <thead><tr><th scope="col">Per abitante</th>{% for a in c.anni %}<th scope="col">{{ a }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for v in andamento %}
+      <tr><th scope="row">{{ v.nome }}</th>{% for x in v.procapite %}<td>{{ x|con_unita(v.unita) if x is not none else "–" }}</td>{% endfor %}</tr>
+      <tr class="mediana"><th scope="row">mediana comuni simili</th>{% for x in v.mediana %}<td>{{ x|con_unita(v.unita) if x is not none else "–" }}</td>{% endfor %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+</section>
+
+<section class="fonti">
+  <h2>Fonti e data dei dati</h2>
+  <ul>
+    <li>Rendiconti: OpenBDAP, Ragioneria Generale dello Stato. Data dei dati per anno di bilancio: {{ date_dei_dati|join("; ") }}.</li>
+    <li>File usati: {{ fonti|join("; ") }}.</li>
+    <li>Residenti: ISTAT, popolazione al 1° gennaio dell'anno dopo quello di bilancio.</li>
+    <li>Pagina generata il {{ esportazione }}.</li>
+  </ul>
+</section>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.plot.ly/plotly-basic-2.35.2.min.js" defer></script>
+<script src="{{ radice }}statico/grafico.js" defer></script>
+{% endblock %}

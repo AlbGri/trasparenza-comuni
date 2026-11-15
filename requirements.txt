@@ -4,6 +4,9 @@ pyarrow==26.0.1
 pandas==2.3.3
 openpyxl==3.1.5
 
+# Sito statico
+Jinja2==3.1.6
+
 # Scarico delle fonti
 requests==2.32.5
 

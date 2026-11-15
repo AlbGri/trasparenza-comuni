@@ -34,6 +34,7 @@ data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 data/export/
+data/sito/
 
 # Jupyter Notebooks
 .ipynb_checkpoints

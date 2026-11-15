@@ -42,10 +42,15 @@ PRO_CAPITE = "diviso i residenti ISTAT al 1 gennaio dell'anno dopo"
 SENZA_GIRO = "senza partite di giro e restituzione delle anticipazioni di cassa"
 
 
+def in_ascii(testo: str) -> str:
+    """Testo in minuscolo, senza accenti ne' spazi, parole unite da trattini."""
+    testo = unicodedata.normalize("NFKD", testo).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", "-", testo.lower()).strip("-")
+
+
 def identificativo_gruppo(fascia: int, ambito: str) -> str:
     """Nome di file di un gruppo: fascia e ambito in minuscolo, senza accenti ne' spazi."""
-    testo = unicodedata.normalize("NFKD", f"{fascia}-{ambito}").encode("ascii", "ignore")
-    return re.sub(r"[^a-z0-9]+", "-", testo.decode().lower()).strip("-")
+    return in_ascii(f"{fascia}-{ambito}")
 
 
 def _serie(valori: dict[int, float], anni: list[int], decimali: int | None) -> list:

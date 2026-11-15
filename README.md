@@ -5,8 +5,8 @@ servizi, e come si colloca rispetto ai comuni simili.
 
 Stato: in costruzione. La pipeline produce le tabelle di base (anagrafica dei comuni, rendiconti
 2016-2025, popolazione), i confronti fra comuni simili (pro capite, indicatori ufficiali,
-andamento) e l'esportazione in JSON; il sito è il prossimo passo. Non c'è ancora un sito
-pubblicato.
+andamento), l'esportazione in JSON e una pagina HTML per comune; ricerca e pagina del metodo
+sono i prossimi passi. Non c'è ancora un sito pubblicato.
 
 ## Obiettivi
 
@@ -47,14 +47,16 @@ pip install -r requirements.txt
 ## Uso
 
 ```bash
-python -m pipeline      # scarica le fonti, scrive le tabelle in data/processed/ e i JSON in data/export/
+python -m pipeline      # scarica le fonti, scrive tabelle (data/processed/), JSON (data/export/) e pagine (data/sito/)
 python -m pytest        # prove automatiche
 ```
 
 Il primo lancio scarica tutti gli anni pubblicati da OpenBDAP e dura circa quindici minuti. I
 lanci successivi riscaricano e ricalcolano solo ciò che alla fonte è cambiato. Si può lanciare un
-solo passo (`rendiconti`, `anagrafica`, `popolazione`, `prezzi`, `confronti`, `esportazione`) e
-limitare gli anni dei rendiconti, per esempio `python -m pipeline rendiconti --anni 2024`.
+solo passo (`rendiconti`, `anagrafica`, `popolazione`, `prezzi`, `confronti`, `esportazione`,
+`sito`) e limitare gli anni dei rendiconti, per esempio `python -m pipeline rendiconti --anni 2024`,
+o le pagine da generare, per esempio `python -m pipeline sito --comuni 037006,057039`. Il sito si
+genera solo se i numeri di controllo tornano.
 
 A fine lancio la pipeline confronta i numeri di controllo degli anni chiusi (comuni, impegni,
 spesa corrente, residenti, mediane) con quelli attesi in `pipeline/controlli_attesi.csv` ed esce

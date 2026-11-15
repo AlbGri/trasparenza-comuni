@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-15
+
+- Sito statico, non ancora pubblicato: una pagina per ognuno degli 8.057 comuni, estinti
+  compresi, con indicatori ufficiali del rendiconto, numeri calcolati dal sito con mediana e
+  posizione fra i comuni simili, spesa per servizio, entrate, parametri di deficitarietà,
+  andamento dal 2016 e fonti con la data dei dati.
+- Pagina iniziale con la ricerca del comune per nome, anche scritto senza accenti.
+- Pagina dei comuni senza rendiconto, anno per anno e per regione.
+- Pagina del metodo: impegni e pagamenti, comuni simili, mediana e posizione, indicatori
+  ufficiali e voci calcolate, valori trattati come assenti, rendiconti non consegnati, fusioni,
+  limiti dei numeri, fonti con le date.
+- Sitemap di tutte le pagine e indirizzo canonico su trasparenza-comuni.albgri.com, per i
+  motori di ricerca.
+
 ## 2026-11-14
 
 - Confronti fra comuni simili: gruppi per fascia di abitanti e area, spesa ed entrate pro capite

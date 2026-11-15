@@ -5,7 +5,8 @@ import pandas as pd
 import pytest
 
 from pipeline.confronti import (
-    calcola_anno, costruisci_gruppi, dimensione_gruppi, residenti_per_ente,
+    calcola_anno, costruisci_gruppi, debiti_fuori_scala, dimensione_gruppi, residenti_per_ente,
+    rimborsi_pro_capite,
 )
 
 
@@ -172,6 +173,74 @@ def test_senza_residenti_solo_importi():
     assert di_x[["valore", "posizione", "scarto"]].isna().all().all()
     riga = confronti.set_index(["misura", "codice"]).loc[("spesa_titolo", "01")]
     assert (riga["comuni"], riga["mediana"]) == (2, 1.5)
+
+
+def test_debito_escluso_fuori_dal_calcolo():
+    gruppi = pd.DataFrame({
+        "cf": ["a", "b", "c", "d"], "anno": 2024, "stato": "consegnato",
+        "residenti": 1_000, "al_1_gennaio": 2025, "fascia": 2,
+        "area": "Centro", "livello": "area", "ambito": "Centro",
+    })
+    vuota = pd.DataFrame({"cf": pd.Series(dtype=str)})
+    tabelle = {
+        "spese": pd.DataFrame({
+            "cf": ["a", "b", "c", "d"], "missione": "01", "programma": "01", "titolo": "01",
+            "impegni": Decimal("1000"), "esclusa": False,
+        }),
+        "entrate": vuota.assign(titolo="", tipologia="", accertamenti=0, esclusa=False),
+        "risultato": vuota.assign(voce="", valore=0),
+        "indicatori_ufficiali": pd.DataFrame({
+            "cf": ["a", "b", "c", "d"], "gruppo": "10", "indicatore": "04",
+            "valore": [Decimal(v) for v in ("1.04", "300", "1", "2")],
+        }),
+    }
+    posizioni, _ = calcola_anno(tabelle, gruppi, debiti_esclusi=pd.DataFrame({"cf": ["a", "c"]}))
+    debito = posizioni[(posizioni["misura"] == "indicatore") & (posizioni["codice"] == "10.04")]
+    assert sorted(debito["cf"]) == ["b", "d"]
+
+
+def test_rimborsi_pro_capite():
+    gruppi = pd.DataFrame({
+        "cf": ["a", "b", "x"], "stato": "consegnato", "residenti": [1_000, 2_000, None],
+    })
+    spese = pd.DataFrame({
+        "cf": ["a", "a", "b", "x"], "titolo": ["04", "01", "01", "04"],
+        "impegni": [Decimal(v) for v in ("30000", "5000", "100", "999")],
+    })
+    rimborsi = rimborsi_pro_capite(spese, gruppi).set_index("cf")["rimborso"].to_dict()
+    assert rimborsi == {"a": 30.0, "b": 0.0}
+
+
+def test_debiti_fuori_scala():
+    righe = {
+        # migliaia scritte come euro: 1 euro di debito e 30 rimborsati l'anno dopo
+        "car": {2016: 1.04, 2017: 999, 2018: 1.05, 2019: 990},
+        # centesimi scritti come euro nel 2024; il 2025 giusto non paga l'errore dell'anno prima
+        "dou": {2022: 1090, 2023: 796, 2024: 54133, 2025: 308},
+        # mutuo vero: da 30 a 1.000 euro, sotto la soglia alta
+        "mut": {2022: 30, 2023: 30, 2024: 1000, 2025: 1000},
+        # ultimo anno senza rimborso dopo: cento volte sotto gli altri anni
+        "ult": {2024: 500, 2025: 2},
+        # l'unico altro anno e' troppo alto: non conta per giudicare l'ultimo
+        "sca": {2021: 127292, 2022: 20, 2025: 292},
+        # un anno solo, senza confronti: oltre il tetto e' comunque fuori
+        "tet": {2019: 1412691},
+    }
+    debiti = pd.DataFrame(
+        [(cf, anno, v) for cf, anni in righe.items() for anno, v in anni.items()],
+        columns=["cf", "anno", "valore"],
+    )
+    rimborsi = pd.DataFrame(
+        [("car", a, 30.0) for a in (2017, 2018, 2019)]
+        + [(cf, a, 2.0) for cf in ("dou", "mut") for a in (2023, 2024, 2025)]
+        + [("ult", 2025, 20.0), ("sca", 2022, 1.0)],
+        columns=["cf", "anno", "rimborso"],
+    )
+    esclusi = debiti_fuori_scala(debiti, rimborsi)
+    assert list(esclusi.itertuples(index=False, name=None)) == [
+        ("car", 2016), ("car", 2018), ("dou", 2024), ("sca", 2021), ("tet", 2019),
+        ("ult", 2025),
+    ]
 
 
 def test_andamento_scarto_dalla_mediana_delle_variazioni():

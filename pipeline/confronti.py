@@ -77,6 +77,18 @@ SCALA_AMMESSA = (0.5, 2)
 # Giorni di ritardo dei pagamenti (9.5) plausibili. Sotto i -60 si pagherebbe prima della
 # fattura (sono giorni scritti per 100); lo zero esatto e' un campo non compilato.
 TEMPESTIVITA = ("09.05", -60, 365)
+# Debito pro capite (10.4), unita' sbagliate in tutti e due i versi. Basso: nessun comune
+# rimborsa l'anno dopo dieci volte il debito che dichiara a fine anno (migliaia scritte come
+# euro); senza l'anno dopo, cento volte sotto la mediana degli altri anni del comune. Alto:
+# oltre 5.000 euro e venti volte la mediana degli altri anni (centesimi scritti come euro); la
+# soglia lascia stare chi passa davvero da poco debito a un mutuo grosso. Oltre 50.000 euro
+# sempre (i debiti alti veri, costanti negli anni, restano sotto i 20.000). Le mediane si
+# calcolano senza i valori gia' tolti.
+DEBITO = "10.04"
+DEBITO_RIMBORSO = 10
+DEBITO_BASSO = 100
+DEBITO_ALTO = (5_000, 20)
+DEBITO_MASSIMO = 50_000
 
 
 def residenti_per_ente(enti: pd.DataFrame, popolazione: pd.DataFrame) -> pd.DataFrame:
@@ -176,6 +188,7 @@ def calcola_anno(
     tabelle: dict[str, pd.DataFrame | str],
     gruppi: pd.DataFrame,
     precedente: pd.DataFrame | None = None,
+    debiti_esclusi: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Valori, posizione nel gruppo, andamento e percentili dei gruppi per un anno.
 
@@ -191,6 +204,8 @@ def calcola_anno(
         tabelle: spese, entrate, risultato, indicatori_ufficiali dell'anno (o percorsi Parquet).
         gruppi: gruppi dell'anno, da `costruisci_gruppi`.
         precedente: posizioni dell'anno prima (cf, misura, codice, valore), per l'andamento.
+        debiti_esclusi: comuni (cf) con il 10.4 dell'anno fuori scala, da
+            `debiti_fuori_scala`.
 
     Returns:
         (posizioni, confronti): una riga per comune e voce; una riga per gruppo usato e voce.
@@ -210,6 +225,10 @@ def calcola_anno(
         con.execute(
             "INSERT INTO precedente SELECT cf, misura, codice, valore FROM righe_precedenti"
         )
+    con.execute("CREATE TABLE debiti_esclusi (cf VARCHAR)")
+    if debiti_esclusi is not None:
+        con.register("righe_debiti", debiti_esclusi)
+        con.execute("INSERT INTO debiti_esclusi SELECT cf FROM righe_debiti")
     anno = int(gruppi["anno"].iloc[0])
     consegnati = gruppi[gruppi["stato"] == "consegnato"]
     validi = consegnati[consegnati["fascia"].notna()].copy()
@@ -265,6 +284,7 @@ def calcola_anno(
                     AND {SCALA_AMMESSA[1]} * a.atteso * 100, false)
                 AND NOT (i.codice = '{TEMPESTIVITA[0]}' AND (i.valore = 0
                     OR i.valore NOT BETWEEN {TEMPESTIVITA[1]} AND {TEMPESTIVITA[2]}))
+                AND NOT (i.codice = '{DEBITO}' AND i.cf IN (SELECT cf FROM debiti_esclusi))
         )
         SELECT u.cf, u.misura, u.codice, u.importo, u.valore,
             CASE WHEN u.misura IN {MISURE_CON_ANDAMENTO} AND p.valore > 0
@@ -313,6 +333,74 @@ def calcola_anno(
     return posizioni, con.execute("SELECT * FROM confronti").df()
 
 
+def rimborsi_pro_capite(spese: pd.DataFrame | str, gruppi: pd.DataFrame) -> pd.DataFrame:
+    """Rimborso prestiti pro capite (impegni del titolo 4) dei comuni consegnati con residenti.
+
+    Args:
+        spese: spese dell'anno (o percorso Parquet).
+        gruppi: gruppi dello stesso anno, da `costruisci_gruppi`.
+
+    Returns:
+        Una riga per comune: cf, rimborso (zero se il titolo 4 manca).
+    """
+    con = duckdb.connect()
+    if isinstance(spese, str):
+        con.execute(f"CREATE VIEW spese AS SELECT * FROM read_parquet('{spese}')")
+    else:
+        con.register("spese", spese)
+    residenti = gruppi[(gruppi["stato"] == "consegnato") & gruppi["residenti"].notna()]
+    con.register("residenti", residenti[["cf", "residenti"]])
+    return con.execute("""
+        SELECT r.cf, coalesce(sum(s.impegni) FILTER (WHERE s.titolo = '04'), 0)::DOUBLE
+            / r.residenti AS rimborso
+        FROM residenti r JOIN spese s USING (cf)
+        GROUP BY r.cf, r.residenti
+    """).df()
+
+
+def debiti_fuori_scala(debiti: pd.DataFrame, rimborsi: pd.DataFrame) -> pd.DataFrame:
+    """Debiti pro capite (10.4) con l'unita' sbagliata, guardando tutti gli anni insieme.
+
+    Args:
+        debiti: valori del 10.4 (cf, anno, valore).
+        rimborsi: rimborso prestiti pro capite (cf, anno, rimborso), da `rimborsi_pro_capite`.
+
+    Returns:
+        Una riga per valore da togliere: cf, anno.
+    """
+    con = duckdb.connect()
+    con.register("debiti", debiti)
+    con.register("rimborsi", rimborsi)
+    return con.execute(f"""
+        WITH positivi AS (
+            SELECT d.cf, d.anno::INTEGER AS anno, d.valore::DOUBLE AS valore,
+                r.rimborso AS rimborso_dopo,
+                coalesce(d.valore * {DEBITO_RIMBORSO} < r.rimborso, false) AS basso
+            FROM debiti d
+            LEFT JOIN rimborsi r ON r.cf = d.cf AND r.anno::INTEGER = d.anno::INTEGER + 1
+            WHERE d.valore > 0
+        ),
+        alti AS (
+            SELECT p.*, p.valore > {DEBITO_MASSIMO} OR coalesce(
+                p.valore > {DEBITO_ALTO[0]} AND p.valore > {DEBITO_ALTO[1]} * (
+                    SELECT median(c.valore) FROM positivi c
+                    WHERE c.cf = p.cf AND c.anno <> p.anno AND NOT c.basso
+                ), false) AS alto
+            FROM positivi p
+        ),
+        ultimi AS (
+            SELECT a.*, coalesce(a.rimborso_dopo IS NULL AND a.valore * {DEBITO_BASSO} < (
+                SELECT median(c.valore) FROM alti c
+                WHERE c.cf = a.cf AND c.anno <> a.anno AND NOT c.basso AND NOT c.alto
+            ), false) AS basso_ultimo
+            FROM alti a
+        )
+        SELECT cf, anno FROM ultimi
+        WHERE basso OR alto OR basso_ultimo
+        ORDER BY cf, anno
+    """).df()
+
+
 def aggiorna() -> bool:
     """Ricalcola gruppi, posizioni e confronti se una tabella a monte e' cambiata.
 
@@ -338,13 +426,29 @@ def aggiorna() -> bool:
             "comuni con rendiconto ma senza popolazione, fuori dai confronti: %s",
             senza.groupby("anno").size().to_dict(),
         )
+    rimborsi = pd.concat(
+        rimborsi_pro_capite((PROCESSED / "spese" / f"{anno}.parquet").as_posix(), g).assign(
+            anno=anno
+        )
+        for anno, g in gruppi.groupby("anno")
+    )
+    gruppo, numero = DEBITO.split(".")
+    debiti = duckdb.sql(f"""
+        SELECT cf, anno, valore
+        FROM read_parquet('{(PROCESSED / "indicatori_ufficiali").as_posix()}/*.parquet')
+        WHERE gruppo = '{gruppo}' AND indicatore = '{numero}' AND valore IS NOT NULL
+    """).df()
+    esclusi = debiti_fuori_scala(debiti, rimborsi)
+    log.info("debito pro capite fuori scala: %s", esclusi.groupby("anno").size().to_dict())
     confronti = []
     precedente = None
     for anno, gruppi_anno in gruppi.groupby("anno"):
         tabelle = {
             nome: (PROCESSED / nome / f"{anno}.parquet").as_posix() for nome in TABELLE_ANNO
         }
-        posizioni, confronti_anno = calcola_anno(tabelle, gruppi_anno, precedente)
+        posizioni, confronti_anno = calcola_anno(
+            tabelle, gruppi_anno, precedente, esclusi[esclusi["anno"] == anno][["cf"]]
+        )
         destinazione = PROCESSED / "posizioni" / f"{anno}.parquet"
         destinazione.parent.mkdir(exist_ok=True)
         posizioni.to_parquet(destinazione, index=False)

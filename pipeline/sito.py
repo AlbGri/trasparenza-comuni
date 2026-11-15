@@ -1,4 +1,5 @@
-"""Sito statico: una pagina HTML per comune, generata dai file di `data/export/`.
+"""Sito statico generato dai file di `data/export/`: pagina iniziale con la ricerca, una pagina
+per comune, pagina dei comuni senza rendiconto e indice della ricerca.
 
 Prima di scrivere controlla la forma di ogni JSON e si ferma al primo file fuori forma: una
 pagina con un numero sbagliato di colonne mostrerebbe numeri sotto l'anno sbagliato.
@@ -308,16 +309,80 @@ def contesto(comune: dict, indice: dict, dizionario: dict, gruppi: dict, meta: d
     }
 
 
+def mancanti(comuni: dict, indice: dict, meta: dict) -> dict:
+    """Rendiconti non consegnati: conteggi per anno e comuni da elencare.
+
+    Args:
+        comuni: JSON dei comuni, per codice ISTAT.
+        indice: righe di `comuni.json`, per codice ISTAT.
+        meta: contenuto di `meta.json`.
+
+    Returns:
+        `conteggi` (consegnati e non per anno), `ultimo` (comuni senza il rendiconto dell'ultimo
+        anno) e `prima` (comuni a cui manca solo qualche anno precedente), questi due divisi
+        per regione.
+    """
+    anni = meta["anni"]
+    conteggi = [
+        {
+            "anno": anno,
+            "consegnati": sum(c["consegna"][i] == "consegnato" for c in comuni.values()),
+            "mancanti": sum(c["consegna"][i] == "non consegnato" for c in comuni.values()),
+            "data": _in_parole(meta["data_dei_dati"][str(anno)]),
+        }
+        for i, anno in enumerate(anni)
+    ]
+    ultimo: dict[str, list] = {}
+    prima: dict[str, list] = {}
+    ordine = sorted(comuni, key=lambda ident: (
+        in_ascii(indice[ident]["regione"]), in_ascii(indice[ident]["provincia"]),
+        in_ascii(indice[ident]["nome"]),
+    ))
+    for ident in ordine:
+        assenti = [a for a, s in zip(anni, comuni[ident]["consegna"]) if s == "non consegnato"]
+        if not assenti:
+            continue
+        voce = indice[ident]
+        riga = {
+            "nome": voce["nome"], "provincia": voce["provincia"], "residenti": voce["residenti"],
+            "estinto": voce["stato"] == "estinto", "indirizzo": indirizzo(ident, voce["nome"]),
+            "anni": [a for a in assenti if a != anni[-1]],
+        }
+        elenco = ultimo if assenti[-1] == anni[-1] else prima
+        elenco.setdefault(voce["regione"], []).append(riga)
+    return {"conteggi": conteggi, "ultimo": ultimo, "prima": prima}
+
+
+def indice_ricerca(indice: dict) -> dict:
+    """Indice della ricerca: province una volta sola, poi una riga breve per comune.
+
+    Riga: codice ISTAT, nome, posizione della provincia, residenti (0 se mancano) e un 1 in
+    coda per gli estinti. L'indirizzo della pagina lo ricava il JavaScript dal nome.
+    """
+    province = sorted({voce["provincia"] for voce in indice.values()})
+    posizione = {provincia: i for i, provincia in enumerate(province)}
+    righe = [
+        [ident, voce["nome"], posizione[voce["provincia"]], voce["residenti"] or 0]
+        + ([1] if voce["stato"] == "estinto" else [])
+        for ident, voce in sorted(indice.items())
+    ]
+    return {"province": province, "comuni": righe}
+
+
 def _leggi(percorso: Path) -> dict:
     return json.loads(percorso.read_text(encoding="utf-8"))
 
 
 def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Path = SITO) -> int:
-    """Scrive le pagine dei comuni e i file statici.
+    """Scrive le pagine dei comuni, la pagina iniziale, i comuni senza rendiconto, l'indice
+    della ricerca e i file statici.
+
+    La pagina iniziale e quella dei comuni senza rendiconto si costruiscono sempre su tutti i
+    comuni, anche quando se ne sceglie qualcuno.
 
     Args:
-        scelti: codici ISTAT dei comuni da generare; None = tutti, e le pagine vecchie si
-            cancellano.
+        scelti: codici ISTAT dei comuni di cui scrivere la pagina; None = tutti, e le pagine
+            vecchie si cancellano.
         ingresso: cartella dell'esportazione.
         uscita: cartella del sito.
 
@@ -336,9 +401,10 @@ def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Pat
     gruppi = {p.stem: _leggi(p) for p in (ingresso / "gruppi").glob("*.json")}
     elenco = _leggi(ingresso / "comuni.json")
     indice = {riga[0]: dict(zip(elenco["campi"], riga)) for riga in elenco["righe"]}
-    identificativi = scelti or sorted(indice)
+    if sconosciuti := set(scelti or []) - set(indice):
+        raise ValueError(f"codici ISTAT assenti da comuni.json: {', '.join(sorted(sconosciuti))}")
     comuni = {}
-    for ident in identificativi:
+    for ident in sorted(indice):
         comune = _leggi(ingresso / "comuni" / f"{ident}.json")
         if problemi := controlla(comune, meta["anni"], dizionario["voci"], gruppi):
             raise ValueError(f"comuni/{ident}.json fuori forma: {'; '.join(problemi[:5])}")
@@ -349,16 +415,39 @@ def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Pat
         trim_blocks=True, lstrip_blocks=True,
     )
     ambiente.filters.update(numero=numero, con_unita=con_unita, sopra=sopra)
-    modello = ambiente.get_template("comune.html")
     if scelti is None:
         shutil.rmtree(uscita / "comuni", ignore_errors=True)
     shutil.copytree(STATICO, uscita / "statico", dirs_exist_ok=True)
-    for ident, comune in comuni.items():
+
+    condivisi = {"segnala": f"{REPO}/issues/new", "anni": meta["anni"]}
+    elenco_mancanti = mancanti(comuni, indice, meta)
+    pagine = {
+        "index.html": ("iniziale.html", {
+            "radice": "", "attivi": sum(v["stato"] == "attivo" for v in indice.values()),
+            "ultimo": elenco_mancanti["conteggi"][-1],
+        }),
+        "comuni-senza-rendiconto/index.html": ("senza_rendiconto.html", {
+            "radice": "../", **elenco_mancanti,
+        }),
+    }
+    for percorso, (nome_modello, dati) in pagine.items():
+        (uscita / percorso).parent.mkdir(parents=True, exist_ok=True)
+        pagina = ambiente.get_template(nome_modello).render(**condivisi, **dati)
+        (uscita / percorso).write_text(pagina, encoding="utf-8")
+    (uscita / "cerca.json").write_text(
+        json.dumps(indice_ricerca(indice), ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+
+    modello = ambiente.get_template("comune.html")
+    da_scrivere = scelti or sorted(comuni)
+    for ident in da_scrivere:
+        comune = comuni[ident]
         cartella = uscita / indirizzo(ident, comune["nome"])
         cartella.mkdir(parents=True, exist_ok=True)
         pagina = modello.render(contesto(comune, indice, dizionario, gruppi, meta))
         (cartella / "index.html").write_text(pagina, encoding="utf-8")
-    return len(comuni)
+    return len(da_scrivere)
 
 
 def aggiorna(scelti: list[str] | None = None) -> bool:

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block titolo %}I bilanci dei comuni italiani{% endblock %}
+{% block descrizione %}Quanto spende ogni comune italiano, per che cosa, e come si colloca fra i comuni simili: rendiconti dal {{ anni[0] }} al {{ anni[-1] }}, indicatori ufficiali e confronti.{% endblock %}
+
+{% block contenuto %}
+<section class="apertura">
+  <h1>I bilanci dei comuni italiani</h1>
+  <p>Quanto spende un comune, per che cosa, e come si colloca fra i comuni simili. Rendiconti dal {{ anni[0] }} al {{ anni[-1] }} di {{ attivi|numero }} comuni, dalla banca dati pubblica della Ragioneria Generale dello Stato.</p>
+  <form class="ricerca" role="search" autocomplete="off">
+    <label for="cerca">Cerca un comune</label>
+    <input id="cerca" type="search" placeholder="Nome del comune, es. Bologna" enterkeyhint="go"
+      spellcheck="false" autocapitalize="off" role="combobox" aria-autocomplete="list"
+      aria-expanded="false" aria-controls="risultati">
+    <ul id="risultati" class="risultati" role="listbox" aria-label="Comuni trovati" hidden></ul>
+    <p id="esito" class="nota" aria-live="polite"></p>
+    <noscript><p class="nota">La ricerca ha bisogno di JavaScript, che in questo browser è disattivato.</p></noscript>
+  </form>
+</section>
+
+<section>
+  <h2>Che cosa trovi nella pagina di un comune</h2>
+  <ul>
+    <li>Gli indicatori ufficiali del rendiconto, calcolati e certificati dal comune stesso.</li>
+    <li>La spesa corrente per servizio (scuola, rifiuti, polizia locale…) e le entrate, per abitante.</li>
+    <li>Il confronto con la mediana dei comuni simili per numero di abitanti e area geografica.</li>
+    <li>L'andamento dal {{ anni[0] }} e i parametri di salute finanziaria dichiarati dal comune.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Da sapere prima di leggere i numeri</h2>
+  <p>Le spese sono impegni: le somme che il comune si è obbligato a spendere nell'anno, non i pagamenti effettivi. Il confronto con i comuni simili dice una posizione, non un giudizio: una spesa più alta può dipendere da servizi in più, dal territorio o da come il comune registra le voci.</p>
+  <p><a href="{{ radice }}metodo/">Come sono fatti questi numeri</a></p>
+</section>
+
+<section>
+  <h2>Rendiconti consegnati</h2>
+  <p>Rendiconto {{ ultimo.anno }}: {{ ultimo.consegnati|numero }} comuni presenti nella banca dati, {{ ultimo.mancanti|numero }} assenti al {{ ultimo.data }}.</p>
+  <p><a href="{{ radice }}comuni-senza-rendiconto/">Comuni senza rendiconto</a></p>
+</section>
+{% endblock %}
+
+{% block script %}
+<script src="{{ radice }}statico/cerca.js" defer></script>
+{% endblock %}

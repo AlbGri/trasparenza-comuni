@@ -82,6 +82,27 @@ tr.totale th, tr.totale td { font-weight: 700; }
 .grafico { width: 100%; min-height: 0; }
 .grafico.pronto { min-height: 22rem; margin-bottom: 1rem; }
 
+.ricerca { margin: 1.5rem 0 0; max-width: 36rem; }
+.ricerca label { display: block; font-weight: 600; margin-bottom: .3rem; }
+/* 16px almeno: sotto, Safari su iPhone ingrandisce la pagina quando si tocca la casella */
+.ricerca input {
+  width: 100%; font: inherit; font-size: 1.05rem; padding: .7rem .8rem;
+  border: 2px solid var(--accento); border-radius: 6px; background: var(--carta); color: inherit;
+}
+.risultati { list-style: none; margin: .3rem 0 0; padding: 0; background: var(--carta); border: 1px solid var(--linea); border-radius: 6px; }
+.risultati li + li { border-top: 1px solid var(--linea); }
+.risultati a { display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .6rem; min-height: 2.75rem; padding: .55rem .8rem; text-decoration: none; color: var(--inchiostro); }
+.risultati span { color: var(--tenue); font-size: .9rem; }
+.risultati a:hover, .risultati [aria-selected="true"] a { background: var(--accento-chiaro); }
+h3 small, th small { color: var(--tenue); font-weight: 400; }
+/* larghezze fisse: le tabelle delle regioni, una sotto l'altra, restano allineate */
+table.mancanti { table-layout: fixed; }
+table.mancanti th, table.mancanti td { white-space: normal; text-align: left; min-width: 0; }
+table.mancanti :is(th, td):nth-child(1) { width: 34%; }
+table.mancanti :is(th, td):nth-child(2) { width: 24%; }
+table.mancanti :is(th, td):nth-child(3) { width: 15%; text-align: right; white-space: nowrap; }
+table.mancanti :is(th, td):nth-child(4) { width: 27%; }
+
 .fonti li { margin-bottom: .4rem; font-size: .92rem; }
 .piede { border-top: 1px solid var(--linea); margin-top: 3rem; padding-block: 1rem 2rem; color: var(--tenue); font-size: .9rem; }
 
@@ -89,4 +110,8 @@ tr.totale th, tr.totale td { font-weight: 700; }
   th, td { padding: .4rem .35rem; }
   th[scope="row"], thead th:first-child { min-width: 8rem; }
   .valore { font-size: 1.4rem; }
+  table.mancanti :is(th, td):nth-child(1) { width: 32%; overflow-wrap: anywhere; }
+  table.mancanti :is(th, td):nth-child(2) { width: 22%; }
+  table.mancanti :is(th, td):nth-child(3) { width: 20%; }
+  table.mancanti :is(th, td):nth-child(4) { width: 26%; }
 }

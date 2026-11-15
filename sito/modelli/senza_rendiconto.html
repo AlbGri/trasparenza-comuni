@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% macro elenco(regioni, colonna_anni) %}
+{% for regione, righe in regioni.items() %}
+<h3>{{ regione }} <small>({{ righe|length }})</small></h3>
+<div class="scorre">
+<table class="mancanti">
+  <thead><tr><th scope="col">Comune</th><th scope="col">Provincia</th><th scope="col">Residenti</th><th scope="col">{{ colonna_anni }}</th></tr></thead>
+  <tbody>
+  {% for r in righe %}
+    <tr><th scope="row"><a href="{{ radice }}{{ r.indirizzo }}/">{{ r.nome }}</a>{% if r.estinto %} <small>non esiste più</small>{% endif %}</th>
+      <td>{{ r.provincia }}</td><td>{{ r.residenti|numero if r.residenti else "–" }}</td><td>{{ r.anni|join(", ") or "–" }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endfor %}
+{% endmacro %}
+
+{% block titolo %}Comuni senza rendiconto{% endblock %}
+{% block descrizione %}I comuni italiani il cui rendiconto non risulta nella banca dati OpenBDAP, anno per anno dal {{ anni[0] }} al {{ anni[-1] }}.{% endblock %}
+
+{% block contenuto %}
+<section>
+  <h1>Comuni senza rendiconto</h1>
+  <p>Il rendiconto è il bilancio consuntivo dell'anno e va inviato alla banca dati della Ragioneria Generale dello Stato entro la primavera dell'anno dopo, salvo proroghe. Qui sono elencati i comuni il cui rendiconto non risulta nella banca dati OpenBDAP alla data dei dati. Un rendiconto può mancare perché approvato o inviato in ritardo, o per motivi che i dati non dicono: questa pagina non ne indica le cause.</p>
+</section>
+
+<section>
+  <h2>Anno per anno</h2>
+  <div class="scorre">
+  <table>
+    <thead><tr><th scope="col">Rendiconto</th><th scope="col">Comuni tenuti a consegnarlo</th><th scope="col">Consegnati</th><th scope="col">Non consegnati</th><th scope="col">Data dei dati</th></tr></thead>
+    <tbody>
+    {% for a in conteggi %}
+      <tr><th scope="row">{{ a.anno }}</th><td>{{ (a.consegnati + a.mancanti)|numero }}</td><td>{{ a.consegnati|numero }}</td><td>{{ a.mancanti|numero }}</td><td>{{ a.data }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="nota">Dal 2016 al 2018, i primi anni della banca dati, i rendiconti assenti sono di più. Un comune nato o estinto per fusione conta solo negli anni in cui esisteva.</p>
+</section>
+
+{% set u = conteggi[-1] %}
+<section>
+  <h2>Rendiconto {{ u.anno }} non presente: {{ u.mancanti|numero }} comuni</h2>
+  <p class="data-dati">Dati OpenBDAP del {{ u.data }}. Residenti: ultimo dato ISTAT disponibile.</p>
+  {{ elenco(ultimo, "Altri anni mancanti") }}
+</section>
+
+<section>
+  <h2>Rendiconti mancanti dal {{ anni[0] }} al {{ anni[-2] }}</h2>
+  <p>Gli altri comuni a cui manca il rendiconto di almeno un anno fra il {{ anni[0] }} e il {{ anni[-2] }}.</p>
+  {{ elenco(prima, "Anni mancanti") }}
+</section>
+{% endblock %}

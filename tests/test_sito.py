@@ -1,9 +1,9 @@
-"""Controllo della forma dei JSON, testi della pagina e generazione di una pagina."""
+"""Controllo della forma dei JSON, testi delle pagine, elenchi e generazione del sito."""
 import json
 
 import pytest
 
-from pipeline.sito import accenti, controlla, genera, numero, sopra
+from pipeline.sito import accenti, controlla, genera, indice_ricerca, mancanti, numero, sopra
 
 ANNI = [2023, 2024]
 VOCI = {
@@ -85,7 +85,10 @@ def test_pagina_generata(comune, tmp_path):
             "fasce": {"2": "1.000-5.000"},
         },
         "dizionario.json": {"voci": VOCI, "parametri": {"0008": "Riscossione minore del 47%"}},
-        "comuni.json": {"campi": ["id", "nome"], "righe": [["099001", "Borgo Prova"]]},
+        "comuni.json": {
+            "campi": ["id", "nome", "provincia", "regione", "stato", "residenti"],
+            "righe": [["099001", "Borgo Prova", "Roma", "Lazio", "attivo", 1000]],
+        },
         "gruppi/2-centro.json": {
             "id": "2-centro", "fascia": "1.000-5.000", "ambito": "Centro", "consegnati": [170, 172],
         },
@@ -102,6 +105,13 @@ def test_pagina_generata(comune, tmp_path):
     assert "Trasporti e diritto alla mobilità" in pagina
     assert "Riscossione minore del 47%" in pagina
     assert (tmp_path / "sito/statico/stile.css").exists()
+    iniziale = (tmp_path / "sito/index.html").read_text(encoding="utf-8")
+    assert "Rendiconto 2024: 1 comuni presenti nella banca dati, 0 assenti" in iniziale
+    elenco = (tmp_path / "sito/comuni-senza-rendiconto/index.html").read_text(encoding="utf-8")
+    assert "Rendiconto 2024 non presente: 0 comuni" in elenco
+    assert json.loads((tmp_path / "sito/cerca.json").read_text(encoding="utf-8")) == {
+        "province": ["Roma"], "comuni": [["099001", "Borgo Prova", 0, 1000]],
+    }
 
 
 def test_json_fuori_forma_ferma_la_generazione(comune, tmp_path):
@@ -115,3 +125,49 @@ def test_json_fuori_forma_ferma_la_generazione(comune, tmp_path):
     (export / "comuni/099001.json").write_text(json.dumps(comune), encoding="utf-8")
     with pytest.raises(ValueError, match="099001.json fuori forma"):
         genera(["099001"], export, tmp_path / "sito")
+
+
+def _indice(*righe) -> dict:
+    campi = ["id", "nome", "provincia", "regione", "stato", "residenti"]
+    return {riga[0]: dict(zip(campi, riga)) for riga in righe}
+
+
+def test_comuni_senza_rendiconto():
+    indice = _indice(
+        ("001", "Zeta", "Torino", "Piemonte", "attivo", 500),
+        ("002", "Alfa", "Torino", "Piemonte", "attivo", 900),
+        ("003", "Beta", "Roma", "Lazio", "estinto", None),
+        ("004", "Gamma", "Roma", "Lazio", "attivo", 2000),
+    )
+    consegne = {
+        "001": ["non consegnato", "non consegnato", "non consegnato"],
+        "002": ["consegnato", "non consegnato", "non consegnato"],
+        "003": ["non consegnato", "consegnato", "non esisteva"],
+        "004": ["consegnato", "consegnato", "consegnato"],
+    }
+    meta = {
+        "anni": [2023, 2024, 2025],
+        "data_dei_dati": dict.fromkeys(["2023", "2024", "2025"], "2026-11-03"),
+    }
+    risultato = mancanti({i: {"consegna": c} for i, c in consegne.items()}, indice, meta)
+    assert [(a["anno"], a["consegnati"], a["mancanti"]) for a in risultato["conteggi"]] == [
+        (2023, 2, 2), (2024, 2, 2), (2025, 1, 2),
+    ]
+    assert risultato["conteggi"][0]["data"] == "3 novembre 2026"
+    assert [(r["nome"], r["anni"]) for r in risultato["ultimo"]["Piemonte"]] == [
+        ("Alfa", [2024]), ("Zeta", [2023, 2024]),
+    ]
+    assert list(risultato["prima"]) == ["Lazio"]
+    beta = risultato["prima"]["Lazio"][0]
+    assert beta["estinto"] and beta["indirizzo"] == "comuni/beta-003"
+
+
+def test_indice_ricerca():
+    indice = _indice(
+        ("002", "Sant'Agata", "Torino", "Piemonte", "attivo", 900),
+        ("001", "Beta", "Roma", "Lazio", "estinto", None),
+    )
+    assert indice_ricerca(indice) == {
+        "province": ["Roma", "Torino"],
+        "comuni": [["001", "Beta", 0, 0, 1], ["002", "Sant'Agata", 1, 900]],
+    }

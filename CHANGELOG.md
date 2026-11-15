@@ -23,6 +23,23 @@
   ultimo anno provvisorio, licenze delle fonti, come citare, contatti e privacy.
 - Indirizzo email per le segnalazioni; nessun file caricato da altri siti (il grafico è servito
   dal sito stesso), nessun cookie.
+- Debito per abitante (indicatore 10.4): un valore molto lontano dagli altri anni dello stesso
+  comune, o dal rimborso dei prestiti dell'anno dopo, è trattato come scritto in un'unità
+  sbagliata e si mostra come "n.d." (935 valori in tutti gli anni).
+- Testi più neutri: gli indicatori ufficiali sono "calcolati dal comune e allegati al suo
+  rendiconto"; la sezione si chiama "Parametri di deficitarietà" e ricorda che non è un
+  giudizio di dissesto.
+- Nei gruppi con meno di 30 comuni la posizione si dice contando ("sopra 7 dei 9 comuni
+  simili"); una voce a zero non ha posizione, con una nota sui servizi svolti da un'unione o da
+  un altro ente.
+- Tempi di pagamento in giorni prima o dopo la scadenza, con un decimale.
+- Date scritte per esteso ("dell'8 maggio"), segno meno leggibile nelle definizioni ufficiali,
+  "7.893 comuni attivi" nella pagina iniziale.
+- Una pagina per ogni gruppo di comuni simili e per ogni anno, collegata da "Confrontato con":
+  regola del gruppo ed elenco dei comuni con provincia, residenti e rendiconto consegnato o no.
+- In fondo alla pagina di ogni comune, "Usare questi dati": l'andamento delle voci principali
+  in CSV per Excel, la citazione già compilata con l'indirizzo della pagina e la segnalazione di
+  un errore.
 
 ## 2026-11-14
 

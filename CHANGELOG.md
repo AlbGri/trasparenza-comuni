@@ -2,7 +2,9 @@
 
 ## 2026-11-15
 
-- Sito statico, non ancora pubblicato: una pagina per ognuno degli 8.057 comuni, estinti
+- Sito pubblicato su https://trasparenza-comuni.albgri.com/ (indirizzo di riserva
+  https://albgri.github.io/trasparenza-comuni/).
+- Sito statico: una pagina per ognuno degli 8.057 comuni, estinti
   compresi, con indicatori ufficiali del rendiconto, numeri calcolati dal sito con mediana e
   posizione fra i comuni simili, spesa per servizio, entrate, parametri di deficitarietà,
   andamento dal 2016 e fonti con la data dei dati.
@@ -22,7 +24,8 @@
 - Metodo: entrate proprie, comuni piccolissimi, differenze con i gruppi del portale OpenBDAP,
   ultimo anno provvisorio, licenze delle fonti, come citare, contatti e privacy.
 - Indirizzo email per le segnalazioni; nessun file caricato da altri siti (il grafico è servito
-  dal sito stesso), nessun cookie.
+  dal sito stesso), nessun cookie del sito: solo quello tecnico di Cloudflare, dichiarato nel
+  metodo.
 - Debito per abitante (indicatore 10.4): un valore molto lontano dagli altri anni dello stesso
   comune, o dal rimborso dei prestiti dell'anno dopo, è trattato come scritto in un'unità
   sbagliata e si mostra come "n.d." (935 valori in tutti gli anni).

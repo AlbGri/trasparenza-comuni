@@ -228,14 +228,13 @@
   </ul>
 </section>
 
+{% if anno is not none %}
 <section class="usare">
   <h2>Usare questi dati</h2>
-  {% if anno is not none %}
   <p><a href="{{ csv }}" download>Scarica l'andamento in CSV</a>: un anno per riga con le voci principali di questa pagina, importo totale e, dove ci sono i residenti, valore per abitante e mediana dei comuni simili. Separatore punto e virgola e virgola decimale: si apre con Excel.</p>
   <p>Come citare: «Elaborazione di Trasparenza comuni su dati OpenBDAP (Ragioneria Generale dello Stato){% if con_residenti %} e ISTAT{% endif %}, rendiconto {{ anno }}, dati {{ data_anno|articolata("del") }}», {{ sito }}{{ percorso }}. Licenze delle fonti e dei dati del sito: <a href="{{ radice }}metodo/#fonti">vedi il metodo</a>.</p>
-  {% endif %}
-  <p>Segnala un errore: {{ self.segnala() }}.</p>
 </section>
+{% endif %}
 {% endblock %}
 
 {% block script %}

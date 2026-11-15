@@ -174,7 +174,7 @@ def test_pagina_generata(comune, tmp_path):
         "e ISTAT, rendiconto 2024, dati del 3 novembre 2026», "
         "https://trasparenza-comuni.albgri.com/comuni/borgo-prova-099001/"
     ) in pagina
-    assert pagina.count(f'<a href="mailto:trasparenza-comuni@albgri.com?subject={oggetto}">') == 2
+    assert pagina.count(f'<a href="mailto:trasparenza-comuni@albgri.com?subject={oggetto}">') == 1
     csv = (tmp_path / "sito/comuni/borgo-prova-099001/andamento-borgo-prova-099001.csv")
     assert csv.read_bytes().startswith(b"\xef\xbb\xbfAnno;Rendiconto;")
     assert "cdn.plot.ly" not in pagina

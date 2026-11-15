@@ -39,7 +39,7 @@
   <p><strong>Le voci calcolate dal sito</strong> (spesa corrente e per investimenti, spesa per servizio, entrate, parte disponibile del risultato di amministrazione) partono dagli schemi di bilancio del rendiconto: il sito somma le righe, toglie le partite di giro e divide per i residenti. Sono calcoli di questo progetto, non del comune, e la pagina del comune dice come sono calcolati. Possono differire da numeri simili pubblicati altrove, per scelte diverse su cosa includere o su quale popolazione usare.</p>
   <p>La spesa per servizio segue le missioni e i programmi del bilancio, la classificazione per funzioni uguale per tutti i comuni: per esempio il programma «Rifiuti» sta nella missione «Sviluppo sostenibile e tutela del territorio e dell'ambiente».</p>
   <p>Le entrate proprie sono i tributi e le entrate extratributarie (tariffe, canoni, multe, affitti) accertati dal comune. Non comprendono i fondi perequativi, come il fondo di solidarietà comunale: il bilancio li mette fra le entrate tributarie, ma sono somme distribuite dallo Stato o dalla regione per ridurre le differenze fra comuni.</p>
-  <p>I numeri ufficiali sono messi prima di quelli calcolati, perché sono certificati dal comune.</p>
+  <p>I numeri ufficiali sono messi prima di quelli calcolati, perché sono i numeri del comune stesso, non elaborazioni di questo sito. Non sono però certificati da un ente esterno: il sito ne toglie alcuni scritti in modo evidentemente sbagliato, come spiegato più sotto.</p>
 </section>
 
 <section id="abitanti">
@@ -60,7 +60,7 @@
     <li>Un gruppo con meno di 20 comuni che hanno il rendiconto e i residenti dell'anno si allarga: prima a tutte le regioni dello stesso tipo nella stessa fascia (ordinarie con ordinarie, speciali con speciali), poi a tutta Italia. Succede soprattutto per le città grandi.</li>
   </ul>
   <p>La pagina del comune dice sempre con quali comuni è confrontato e quanti di loro hanno il rendiconto di quell'anno. La fascia dipende dai residenti dell'anno: un comune vicino al confine fra due fasce può cambiare gruppo da un anno all'altro.</p>
-  <p>Limiti noti: il Trentino-Alto Adige è un gruppo unico, ma le province di Trento e di Bolzano hanno regole finanziarie diverse. I gruppi non tengono conto di turismo, montagna, pendolari o servizi che un comune svolge anche per i vicini, come un capoluogo: due comuni dello stesso gruppo possono avere bisogni molto diversi. I gruppi non sono quelli del portale OpenBDAP, che usa altre fasce di abitanti (per esempio fino a 1.000, da 10.001 a 50.000, da 50.001 a 100.000): un comune può avere comuni simili diversi qui e nel portale, e quindi una mediana diversa.</p>
+  <p>Limiti noti: il Trentino-Alto Adige è un gruppo unico, ma le province di Trento e di Bolzano hanno regole finanziarie diverse. Quando un gruppo si allarga alle regioni speciali, mette insieme regioni con finanze molto diverse (Sicilia e Sardegna con Valle d'Aosta, Trentino-Alto Adige e Friuli-Venezia Giulia): nei gruppi allargati la mediana va letta con più cautela. I gruppi non tengono conto di turismo, montagna, pendolari o servizi che un comune svolge anche per i vicini, come un capoluogo: due comuni dello stesso gruppo possono avere bisogni molto diversi. I gruppi non sono quelli del portale OpenBDAP, che usa altre fasce di abitanti (per esempio fino a 1.000, da 10.001 a 50.000, da 50.001 a 100.000): un comune può avere comuni simili diversi qui e nel portale, e quindi una mediana diversa.</p>
 </section>
 
 <section id="mediana">
@@ -68,6 +68,7 @@
   <p>Per ogni voce la pagina del comune mostra la mediana dei comuni simili e la posizione del comune fra loro.</p>
   <p>La mediana è il valore di mezzo: metà dei comuni del gruppo ha un valore più basso, metà più alto. La media invece si sposta per pochi comuni con valori estremi: in un gruppo di piccoli comuni, uno solo con una grande opera in corso basta ad alzare la media degli investimenti per abitante, mentre la mediana quasi non cambia.</p>
   <p>La posizione è la percentuale degli altri comuni del gruppo con un valore più basso: «sopra l'80% dei comuni simili» vuol dire che 80 comuni simili su 100 hanno un valore più basso. Lo 0% è il valore più basso del gruppo, il 100% il più alto. Una voce di spesa o di entrata che il comune non ha nell'anno conta come zero; un indicatore ufficiale assente resta fuori dal confronto.</p>
+  <p>Quando meno di {{ gruppo_piccolo }} comuni del gruppo hanno un valore per la voce, una percentuale salterebbe a scatti grandi: la pagina allora conta i comuni, per esempio «sopra 7 dei 9 comuni simili». Un valore a zero non ha posizione: dire che è il più basso non aggiunge niente, e spesso il servizio lo svolge un altro ente (vedi i <a href="#limiti">limiti</a>).</p>
   <p>La posizione dice dove sta un numero, non se è buono o cattivo. Una spesa più alta della mediana può voler dire più servizi, costi più alti, un territorio più difficile o un modo diverso di registrare le voci.</p>
 </section>
 
@@ -127,13 +128,13 @@
     <dt><a href="https://openbdap.rgs.mef.gov.it/">OpenBDAP</a>, Ragioneria Generale dello Stato</dt>
     <dd>Rendiconti dei comuni: schemi di bilancio (spese, entrate, risultato di amministrazione, parametri di deficitarietà) e Piano degli indicatori. Data dei file, per anno di bilancio: {{ date_dei_dati|join("; ") }}.</dd>
     <dt><a href="https://demo.istat.it/">ISTAT</a>, popolazione residente</dt>
-    <dd>Residenti di ogni comune al 1° gennaio. Dati aggiornati al {{ date_fonti.istat_popolazione }}.</dd>
+    <dd>Residenti di ogni comune al 1° gennaio. Dati aggiornati {{ date_fonti.istat_popolazione|articolata("al") }}.</dd>
     <dt><a href="https://www.istat.it/">ISTAT</a>, elenco dei comuni e variazioni amministrative</dt>
-    <dd>Codici, nomi, province e regioni dei comuni, fusioni ed estinzioni. Dati aggiornati al {{ date_fonti.istat_comuni }}.</dd>
+    <dd>Codici, nomi, province e regioni dei comuni, fusioni ed estinzioni. Dati aggiornati {{ date_fonti.istat_comuni|articolata("al") }}.</dd>
     <dt><a href="https://indicepa.gov.it/">IndicePA</a>, indice dei domicili digitali della pubblica amministrazione</dt>
-    <dd>Anagrafe degli enti, per collegare codice fiscale e codice ISTAT. Dati aggiornati al {{ date_fonti.indicepa }}.</dd>
+    <dd>Anagrafe degli enti, per collegare codice fiscale e codice ISTAT. Dati aggiornati {{ date_fonti.indicepa|articolata("al") }}.</dd>
     <dt><a href="https://ec.europa.eu/eurostat/">Eurostat</a>, indice dei prezzi al consumo armonizzato (IPCA) dell'Italia</dt>
-    <dd>Media annua, per la frase sull'inflazione di questa pagina. Dati aggiornati al {{ date_fonti.eurostat_prezzi }}.</dd>
+    <dd>Media annua, per la frase sull'inflazione di questa pagina. Dati aggiornati {{ date_fonti.eurostat_prezzi|articolata("al") }}.</dd>
   </dl>
   <p>Ultima esportazione dei dati: {{ esportazione }}. Le date sono quelle dei file pubblicati dalle fonti: i dati si aggiornano quando una fonte pubblica una nuova versione.</p>
   <p>OpenBDAP pubblica i dati con licenza Creative Commons Attribuzione (CC BY); ISTAT e IndicePA con licenza Creative Commons Attribuzione 4.0 (CC BY 4.0); Eurostat ne consente il riuso citando la fonte. I dati sono stati rielaborati: somme, divisioni per i residenti, valori esclusi secondo le regole di questa pagina.</p>
@@ -143,7 +144,7 @@
 
 <section id="contatti">
   <h2>Contatti e privacy</h2>
-  <p>Per segnalare un errore o contestare un numero: {{ contatto }}, oppure una <a href="{{ segnala }}">segnalazione pubblica su GitHub</a>. Il sito è curato da Alberto Grippaldi, a titolo personale.</p>
+  <p>Per segnalare un errore o contestare un numero: <a href="mailto:{{ contatto }}">{{ contatto }}</a>, oppure una <a href="{{ segnala }}">segnalazione pubblica su GitHub</a>. Il sito è curato da Alberto Grippaldi, a titolo personale.</p>
   <p>Il sito non usa cookie né strumenti di statistica o di tracciamento, e non carica file da altri siti. Come per ogni sito, i server che lo ospitano (GitHub Pages e Cloudflare) registrano gli accessi.</p>
 </section>
 {% endblock %}

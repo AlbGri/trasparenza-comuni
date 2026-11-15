@@ -4,7 +4,8 @@ import json
 import pytest
 
 from pipeline.sito import (
-    accenti, controlla, elenca, genera, indice_ricerca, mancanti, numero, sopra,
+    accenti, articolata, con_unita, controlla, elenca, genera, indice_ricerca, mancanti, numero,
+    posizione_breve, sopra,
 )
 
 ANNI = [2023, 2024]
@@ -81,6 +82,20 @@ def test_testi():
     assert sopra(84) == "sopra l'84% dei comuni simili"
     assert sopra(62) == "sopra il 62% dei comuni simili"
     assert sopra(0) == "nessun comune simile ha un valore più basso"
+    assert sopra(84, 179) == "sopra l'84% dei comuni simili"
+    # gruppo piccolo: si contano gli altri comuni
+    assert sopra(45, 9) == "sopra 4 dei 9 comuni simili"
+    assert sopra(100, 9) == "sopra tutti i 9 comuni simili"
+    assert sopra(0, 9) == "nessuno dei 9 comuni simili ha un valore più basso"
+    assert sopra(0, 1) == "sotto l'unico altro comune simile"
+    assert posizione_breve(45, 9) == "4 su 9"
+    assert posizione_breve(84, 179) == "84%"
+    assert posizione_breve(None) == "–"
+    assert con_unita(-16.8, "giorni") == "16,8 prima"
+    assert con_unita(5, "giorni") == "5,0 dopo"
+    assert articolata("8 maggio 2026", "del") == "dell'8 maggio 2026"
+    assert articolata("11 marzo 2026", "il") == "l'11 marzo 2026"
+    assert articolata("3 novembre 2026", "al") == "al 3 novembre 2026"
     assert elenca([2019, 2020, 2021]) == "2019, 2020 e 2021"
     assert elenca([2025]) == "2025"
     assert accenti("Viabilita' e dell'ambiente, attivita'") == (
@@ -114,6 +129,11 @@ def test_pagina_generata(comune, tmp_path):
         "gruppi/2-centro.json": {
             "id": "2-centro", "fascia": "1.000-5.000", "ambito": "Centro",
             "comuni": [175, 180], "consegnati": [170, 172],
+            # i trasporti hanno un valore solo in 10 comuni del gruppo: si contano
+            "voci": {
+                "spesa_titolo/01": {"comuni": [170, 172]},
+                "spesa_corrente_missione/10": {"comuni": [10, 10]},
+            },
         },
         "comuni/099001.json": comune,
     }
@@ -128,7 +148,13 @@ def test_pagina_generata(comune, tmp_path):
     assert "progetto indipendente: non è del Comune di Borgo Prova" in pagina
     assert "escluso da una regola del sito" in pagina
     assert "Parametri non presenti nella banca dati OpenBDAP per il 2023" in pagina
-    assert "trasparenza-comuni@albgri.com" in pagina
+    assert "<td>4 su 9</td>" in pagina
+    assert "<h2>Parametri di deficitarietà</h2>" in pagina
+    assert "dati OpenBDAP del 3 novembre 2026" in pagina
+    assert "Pagina generata il 15 novembre 2026" in pagina
+    assert 'class="lingua"' not in pagina
+    oggetto = "Errore%20nella%20pagina%20di%20Borgo%20Prova%20%28099001%29"
+    assert f'<a href="mailto:trasparenza-comuni@albgri.com?subject={oggetto}">' in pagina
     assert "cdn.plot.ly" not in pagina
     assert (tmp_path / "sito/statico/plotly-basic-2.35.2.min.js").exists()
     assert "Trasporti e diritto alla mobilità" in pagina
@@ -140,6 +166,7 @@ def test_pagina_generata(comune, tmp_path):
     assert "Rendiconto 2024 non presente: 0 comuni" in elenco
     metodo = (tmp_path / "sito/metodo/index.html").read_text(encoding="utf-8")
     assert "Sei fasce di abitanti: 1.000-5.000." in metodo
+    assert '<a href="mailto:trasparenza-comuni@albgri.com">' in metodo
     assert "saliti di circa il 1%" in metodo and "2023-2024: 3 novembre 2026" in metodo
     sito = "https://trasparenza-comuni.albgri.com/"
     assert f'<link rel="canonical" href="{sito}comuni/borgo-prova-099001/">' in pagina

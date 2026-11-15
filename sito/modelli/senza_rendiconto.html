@@ -43,7 +43,7 @@
 {% set u = conteggi[-1] %}
 <section>
   <h2>Rendiconto {{ u.anno }} non presente: {{ u.mancanti|numero }} comuni</h2>
-  <p class="data-dati">Dati OpenBDAP del {{ u.data }}. Residenti: ultimo dato ISTAT disponibile.</p>
+  <p class="data-dati">Dati OpenBDAP {{ u.data|articolata("del") }}. Residenti: ultimo dato ISTAT disponibile.</p>
   {{ elenco(ultimo, "Altri anni mancanti") }}
 </section>
 

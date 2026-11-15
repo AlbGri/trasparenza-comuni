@@ -71,7 +71,7 @@ Tabelle prodotte, tutte per i soli comuni:
 | `spese` | impegni, pagamenti e previsioni per missione, programma e titolo | OpenBDAP |
 | `entrate` | accertamenti e riscossioni per titolo e tipologia | OpenBDAP |
 | `risultato` | voci del risultato di amministrazione | OpenBDAP |
-| `indicatori_ufficiali` | i 55 indicatori certificati dal comune | OpenBDAP |
+| `indicatori_ufficiali` | i 55 indicatori calcolati dal comune e allegati al rendiconto | OpenBDAP |
 | `parametri` | parametri di deficitarietà, dal 2019 | OpenBDAP |
 | `popolazione` | residenti al 1 gennaio dell'anno successivo a quello di bilancio | ISTAT |
 | `gruppi` | gruppo di comuni simili di ogni comune, anno per anno: fascia di abitanti e area | pipeline |

@@ -4,6 +4,7 @@
   var nodo = document.getElementById("dati-grafico");
   var area = document.getElementById("grafico");
   var menu = document.getElementById("scelta-voce");
+  var notaGiorni = document.getElementById("nota-giorni");
   if (!nodo || !area || !window.Plotly) return;
   var dati = JSON.parse(nodo.textContent);
   if (!dati.voci.length) return;
@@ -21,7 +22,9 @@
 
   function disegna() {
     var voce = dati.voci[menu.value];
-    var formato = "%{y:,." + (voce.unita === "percentuale" ? 1 : 0) + "f}" + SUFFISSI[voce.unita] + "<extra></extra>";
+    var decimali = voce.unita === "percentuale" || voce.unita === "giorni" ? 1 : 0;
+    var formato = "%{y:,." + decimali + "f}" + SUFFISSI[voce.unita] + "<extra></extra>";
+    if (notaGiorni) notaGiorni.hidden = voce.unita !== "giorni";
     var tracce = [{
       x: dati.anni, y: voce.comune, name: "Questo comune", mode: "lines+markers",
       line: { color: "#1d5c87", width: 3 }, marker: { size: 7 }, hovertemplate: formato

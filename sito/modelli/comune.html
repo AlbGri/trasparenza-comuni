@@ -5,11 +5,11 @@
   <p class="valore">{{ r.testo }}{% if r.unita == "euro per abitante" %} <small>per abitante</small>{% elif r.unita == "euro" %} <small>in totale</small>{% endif %}</p>
   {% if r.posizione is not none %}
   <p class="confronto">Mediana dei comuni simili: {{ r.mediana|con_unita(r.unita) }}</p>
-  <div class="scala" role="img" aria-label="{{ r.posizione|sopra }}">
+  <div class="scala" role="img" aria-label="{{ r.posizione|sopra(r.altri) }}">
     <span class="segno-mediana"></span><span class="segno" style="left: {{ r.posizione }}%"></span>
   </div>
   <div class="scala-legenda" aria-hidden="true"><span>più basso</span><span>mediana</span><span>più alto</span></div>
-  <p class="confronto">{{ r.posizione|sopra }}</p>
+  <p class="confronto">{{ r.posizione|sopra(r.altri) }}</p>
   {% endif %}
   <details>
     <summary>Che cosa misura</summary>
@@ -26,12 +26,12 @@
   {% if senza_residenti %}
   <thead><tr><th scope="col">{{ intestazione }}</th><th scope="col">Importo totale</th></tr></thead>
   {% else %}
-  <thead><tr><th scope="col">{{ intestazione }}</th><th scope="col">Per abitante</th><th scope="col">Mediana comuni simili</th><th scope="col">Sopra il … dei comuni simili</th></tr></thead>
+  <thead><tr><th scope="col">{{ intestazione }}</th><th scope="col">Per abitante</th><th scope="col">Mediana comuni simili</th><th scope="col">Comuni simili con un valore più basso</th></tr></thead>
   {% endif %}
   <tbody>
   {% for r in righe %}
     <tr><th scope="row">{{ r.nome }}</th><td>{{ r.testo }}</td>
-      {% if not senza_residenti %}<td>{{ r.mediana|con_unita(r.unita) }}</td><td>{{ r.posizione }}%</td>{% endif %}
+      {% if not senza_residenti %}<td>{{ r.mediana|con_unita(r.unita) }}</td><td>{{ r.posizione|posizione_breve(r.altri) }}</td>{% endif %}
     </tr>
   {% endfor %}
   </tbody>
@@ -41,7 +41,7 @@
 
 {% block titolo %}Comune di {{ c.nome }}: rendiconti e confronti{% endblock %}
 {% block descrizione %}Rendiconti del Comune di {{ c.nome }} ({{ c.provincia }}) dal {{ c.anni[0] }} al {{ c.anni[-1] }}, letti da un progetto indipendente, non del comune né della Ragioneria Generale dello Stato: spesa, entrate, indicatori ufficiali e confronto con i comuni simili.{% endblock %}
-{% block segnala %}<a href="{{ segnala }}?title={{ ('Errore nella pagina di ' ~ c.nome ~ ' (' ~ c.id ~ ')')|urlencode }}">Segnala un errore</a>{% endblock %}
+{% block segnala %}{% set oggetto = ('Errore nella pagina di ' ~ c.nome ~ ' (' ~ c.id ~ ')')|urlencode %}per email a <a href="mailto:{{ contatto }}?subject={{ oggetto }}">{{ contatto }}</a> o <a href="{{ segnala }}?title={{ oggetto }}">su GitHub</a>{% endblock %}
 
 {% block contenuto %}
 <section class="identita">
@@ -49,7 +49,7 @@
   <h1>Comune di {{ c.nome }}</h1>
   <p class="nota">Pagina di Trasparenza comuni, progetto indipendente: non è del Comune di {{ c.nome }} né della Ragioneria Generale dello Stato. I numeri vengono dalla banca dati pubblica OpenBDAP.</p>
   {% if c.stato == "estinto" %}
-  <p class="avviso">Questo comune non esiste più{% if cessazione %} dal {{ cessazione }}{% endif %}{% if c.successore in collegati %}: è confluito nel Comune di
+  <p class="avviso">Questo comune non esiste più{% if cessazione %} {{ cessazione|articolata("dal") }}{% endif %}{% if c.successore in collegati %}: è confluito nel Comune di
     <a href="{{ radice }}{{ collegati[c.successore].indirizzo }}/">{{ collegati[c.successore].nome }}</a>{% endif %}.</p>
   {% endif %}
   {% if mancano_dopo %}
@@ -78,7 +78,7 @@
 </section>
 
 {% if anno is not none %}
-{% set riga_dati %}Rendiconto {{ anno }}, dati OpenBDAP del {{ data_anno }}{% if provvisorio and consegne_ultimo.mancanti %}. Dati provvisori: {{ consegne_ultimo.mancanti|numero }} comuni non hanno ancora consegnato il rendiconto {{ anno }}, e mediane e posizioni possono cambiare{% endif %}.{% endset %}
+{% set riga_dati %}Rendiconto {{ anno }}, dati OpenBDAP {{ data_anno|articolata("del") }}{% if provvisorio and consegne_ultimo.mancanti %}. Dati provvisori: {{ consegne_ultimo.mancanti|numero }} comuni non hanno ancora consegnato il rendiconto {{ anno }}, e mediane e posizioni possono cambiare{% endif %}.{% endset %}
 {% endif %}
 {% if anno is none %}
 <section><p>Nessun rendiconto consegnato fra il {{ c.anni[0] }} e il {{ c.anni[-1] }}: non ci sono numeri da mostrare.</p></section>
@@ -88,10 +88,10 @@
 <section>
   <h2>Indicatori ufficiali del rendiconto {{ anno }}</h2>
   <p class="data-dati">{{ riga_dati }}</p>
-  <p>Calcolati e certificati dal comune nel suo piano degli indicatori, riportati come sono stati scritti. {% if gruppo %}Accanto, la mediana dei {{ gruppo.descrizione }} e la quota di questi comuni con un valore più basso.{% endif %}</p>
+  <p>Calcolati dal comune e allegati al suo rendiconto, nel piano degli indicatori; riportati come sono stati scritti. {% if gruppo %}Accanto, la mediana dei {{ gruppo.descrizione }} e quanti di questi comuni hanno un valore più basso.{% endif %}</p>
   <div class="scorre">
   <table>
-    <thead><tr><th scope="col">Indicatore</th><th scope="col">Valore</th><th scope="col">Mediana comuni simili</th><th scope="col">Sopra il … dei comuni simili</th></tr></thead>
+    <thead><tr><th scope="col">Indicatore</th><th scope="col">Valore</th><th scope="col">Mediana comuni simili</th><th scope="col">Comuni simili con un valore più basso</th></tr></thead>
     <tbody>
     {% for r in indicatori %}
       {% if r.motivo %}
@@ -100,8 +100,8 @@
       {% else %}
       <tr><th scope="row">{{ r.nome }}</th>
         <td>{{ r.testo }}{% if r.unita == "euro per abitante" %} <small>per ab.</small>{% endif %}</td>
-        <td>{{ r.mediana|con_unita(r.unita) if r.posizione is not none else "" }}</td>
-        <td>{{ r.posizione ~ "%" if r.posizione is not none else "" }}</td></tr>
+        <td>{{ r.mediana|con_unita(r.unita) if r.mediana is not none else "" }}</td>
+        <td>{{ r.posizione|posizione_breve(r.altri) if r.mediana is not none else "" }}</td></tr>
       {% endif %}
     {% endfor %}
     </tbody>
@@ -116,7 +116,7 @@
       <dd>Nome ufficiale: {{ r.nome_ufficiale }}.{% if r.definizione %} Definizione: {{ r.definizione }}.{% endif %}{% if r.spiegazione %} Nota: {{ r.spiegazione }}.{% endif %}</dd>
     {% endfor %}
     </dl>
-    <p>Fonte: {{ indicatori[0].fonte }}.</p>
+    <p>Fonte: {{ indicatori[0].fonte }}. Nelle definizioni il segno meno, illeggibile nei file della fonte, è reso con «–».</p>
   </details>
 </section>
 {% endif %}
@@ -142,10 +142,12 @@
   <h2>Spesa corrente per servizio, {{ anno }}</h2>
   <p>Impegni di spesa corrente per missione del bilancio, dal più grande al più piccolo. Calcolati da questo sito.</p>
   {{ tabella(missioni, "Servizio", senza_residenti) }}
-  {% if missioni_zero %}<p class="nota">Nessuna spesa corrente nel {{ anno }} per: {{ missioni_zero|join(", ") }}.</p>{% endif %}
+  {% set altro_ente %}Spesso un servizio senza spesa è svolto da un'unione di comuni o da un altro ente: <a href="{{ radice }}metodo/#limiti">vedi il metodo</a>.{% endset %}
+  {% if missioni_zero %}<p class="nota">Nessuna spesa corrente nel {{ anno }} per: {{ missioni_zero|join(", ") }}. {{ altro_ente }}</p>{% endif %}
   {% if programmi %}
   <h3>Alcuni servizi in dettaglio</h3>
   {{ tabella(programmi, "Programma", senza_residenti) }}
+  {% if programmi_zero and not missioni_zero %}<p class="nota">{{ altro_ente }}</p>{% endif %}
   {% endif %}
 </section>
 {% endif %}
@@ -161,8 +163,8 @@
 
 {% if parametri.anni %}
 <section>
-  <h2>Salute finanziaria</h2>
-  <p>Parametri di deficitarietà strutturale, dichiarati dal comune nel rendiconto dal 2019. Un parametro acceso segnala una soglia superata; un comune con almeno metà dei parametri accesi è considerato strutturalmente deficitario.</p>
+  <h2>Parametri di deficitarietà</h2>
+  <p>Parametri di deficitarietà strutturale, dichiarati dal comune nel rendiconto dal 2019. Un parametro acceso segnala una soglia superata; un comune con almeno metà dei parametri accesi è considerato strutturalmente deficitario. Non è un giudizio di dissesto finanziario: <a href="{{ radice }}metodo/#limiti">vedi il metodo</a>.</p>
   {% if not parametri.presenti %}
   <p>Parametri non presenti nella banca dati OpenBDAP per nessun anno dal 2019: il comune ha consegnato il rendiconto, ma la banca dati non ha i suoi parametri. Non vuol dire che non ne abbia di accesi.</p>
   {% elif parametri.righe %}
@@ -197,6 +199,7 @@
   {% endif %}
   <label class="scelta" for="scelta-voce" hidden>Voce <select id="scelta-voce"></select></label>
   <div id="grafico" class="grafico"></div>
+  <p id="nota-giorni" class="nota" hidden>Sotto lo zero: fatture pagate in media prima della scadenza; sopra lo zero, dopo.</p>
   <script type="application/json" id="dati-grafico">{{ grafico|tojson }}</script>
   {% if andamento %}
   <div class="scorre">
@@ -221,7 +224,7 @@
     {% if con_residenti %}
     <li>Residenti: ISTAT, popolazione al 1° gennaio dell'anno dopo quello di bilancio.</li>
     {% endif %}
-    <li>Pagina generata il {{ esportazione }}.</li>
+    <li>Pagina generata {{ esportazione|articolata("il") }}.</li>
   </ul>
 </section>
 {% endblock %}

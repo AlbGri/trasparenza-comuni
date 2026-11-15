@@ -51,13 +51,17 @@ NOMI_BREVI = {
     "indicatore/04.04": "Spesa per il personale, per abitante",
     "indicatore/05.01": "Spesa per servizi affidati all'esterno",
     "indicatore/07.04": "Investimenti, per abitante",
-    "indicatore/09.05": "Tempi di pagamento delle fatture, rispetto alla scadenza",
+    "indicatore/09.05": "Tempi di pagamento delle fatture, giorni rispetto alla scadenza",
     "indicatore/10.04": "Debito, per abitante",
     "indicatore/13.01": "Debiti fuori bilancio riconosciuti e finanziati",
     "indicatore/13.02": "Debiti fuori bilancio in corso di riconoscimento",
     "indicatore/13.03": "Debiti fuori bilancio riconosciuti, da finanziare",
 }
 DEBITI_FUORI_BILANCIO = ("indicatore/13.01", "indicatore/13.02", "indicatore/13.03")
+# voci tecniche di quadratura contabile, sempre a zero: fuori dalle pagine
+SQUADRATURA = ("entrate_titolo/88", "spesa_titolo/88")
+# sotto questo numero di comuni con il valore, la posizione si dice contando, non in percentuale
+GRUPPO_PICCOLO = 30
 MESI = (
     "gennaio febbraio marzo aprile maggio giugno luglio agosto settembre ottobre novembre "
     "dicembre"
@@ -135,7 +139,9 @@ def con_unita(valore: float | None, unita: str) -> str:
     if unita == "percentuale":
         return f"{numero(valore, 1)}%"
     if unita == "giorni":
-        return f"{numero(valore)} giorni"
+        if valore == 0:
+            return "alla scadenza"
+        return f"{numero(abs(valore), 1)} {'prima' if valore < 0 else 'dopo'}"
     return f"{numero(valore)} €"
 
 
@@ -145,10 +151,34 @@ def elenca(valori: list) -> str:
     return " e ".join([", ".join(testi[:-1]), testi[-1]]) if len(testi) > 1 else "".join(testi)
 
 
-def sopra(posizione: int | None) -> str:
-    """Posizione nel gruppo detta a parole, senza giudizi."""
-    if posizione is None:
+def _piu_bassi(posizione: int, altri: int) -> int:
+    """Quanti degli altri comuni del gruppo hanno un valore piu' basso."""
+    return round(posizione * altri / 100)
+
+
+def _piccolo(altri: int | None) -> bool:
+    """Gruppo in cui la posizione si dice contando i comuni."""
+    return altri is not None and altri + 1 < GRUPPO_PICCOLO
+
+
+def sopra(posizione: int | None, altri: int | None = None) -> str:
+    """Posizione nel gruppo detta a parole, senza giudizi.
+
+    Args:
+        posizione: percentuale degli altri comuni del gruppo con un valore piu' basso.
+        altri: quanti altri comuni del gruppo hanno il valore; in un gruppo piccolo si contano.
+    """
+    if posizione is None or altri == 0:
         return ""
+    if _piccolo(altri):
+        bassi = _piu_bassi(posizione, altri)
+        if altri == 1:
+            return f"{'sopra' if bassi else 'sotto'} l'unico altro comune simile"
+        if bassi == altri:
+            return f"sopra tutti i {altri} comuni simili"
+        if bassi == 0:
+            return f"nessuno dei {altri} comuni simili ha un valore più basso"
+        return f"sopra {bassi} dei {altri} comuni simili"
     if posizione == 0:
         return "nessun comune simile ha un valore più basso"
     if posizione == 100:
@@ -157,10 +187,32 @@ def sopra(posizione: int | None) -> str:
     return f"sopra {articolo}{posizione}% dei comuni simili"
 
 
-def _riga(voce: str, dati: dict, i: int, dizionario: dict) -> dict | None:
+def posizione_breve(posizione: int | None, altri: int | None = None) -> str:
+    """Posizione per le tabelle: '67%', '7 su 9' in un gruppo piccolo, '–' senza confronto."""
+    if posizione is None or altri == 0:
+        return "–"
+    if _piccolo(altri):
+        return f"{_piu_bassi(posizione, altri)} su {altri}"
+    return f"{posizione}%"
+
+
+def articolata(data: str, preposizione: str) -> str:
+    """Preposizione davanti a una data in parole: 'del 3 novembre', 'dell'8 maggio', 'l'11'."""
+    if data.split(" ", 1)[0] in ("8", "11"):
+        return f"{'' if preposizione == 'il' else preposizione}l'{data}"
+    return f"{preposizione} {data}"
+
+
+def _riga(
+    voce: str, dati: dict, i: int, dizionario: dict, comuni_gruppo: int | None = None
+) -> dict | None:
     """Numeri di una voce nell'anno di indice i, pronti per il modello.
 
-    Un indicatore senza valore ma con il motivo resta, come "n.d."; senza motivo, None.
+    Un indicatore senza valore ma con il motivo resta, come "n.d."; senza motivo, None. Un
+    valore a zero non ha posizione: spesso il servizio lo svolge un altro ente.
+
+    Args:
+        comuni_gruppo: comuni del gruppo con un valore per la voce, compreso questo.
     """
     definizione = dizionario[voce]
     motivo = dati["motivo"][i] if "motivo" in dati else None
@@ -185,7 +237,8 @@ def _riga(voce: str, dati: dict, i: int, dizionario: dict) -> dict | None:
         "unita": unita,
         "testo": con_unita(valore, unita),
         "mediana": dati["mediana"][i] if unita != "euro" else None,
-        "posizione": dati["posizione"][i] if unita != "euro" else None,
+        "posizione": dati["posizione"][i] if unita != "euro" and valore != 0 else None,
+        "altri": comuni_gruppo - 1 if comuni_gruppo else None,
         "motivo": motivo,
         "importo": dati["importo"][i] if "importo" in dati else None,
         "misura": definizione["misura"],
@@ -245,9 +298,10 @@ def _parametri(comune: dict, testi: dict) -> dict:
 
 
 def _in_parole(data: str) -> str:
-    """Data ISO in parole, es. '8 maggio 2026'."""
+    """Data ISO in parole, es. '8 maggio 2026', '1° luglio 2025'."""
     anno, mese, giorno = data.split("-")
-    return f"{int(giorno)} {MESI[int(mese) - 1]} {anno}"
+    giorno = "1°" if giorno == "01" else str(int(giorno))
+    return f"{giorno} {MESI[int(mese) - 1]} {anno}"
 
 
 def _date_dei_dati(date: dict) -> list[str]:
@@ -270,14 +324,19 @@ def contesto(comune: dict, indice: dict, dizionario: dict, gruppi: dict, meta: d
     Cio' che dipende da tutti i comuni (rendiconti mancanti dell'ultimo anno) lo aggiunge
     `genera`.
     """
-    voci = dizionario["voci"]
+    voci = {voce: v for voce, v in dizionario["voci"].items() if voce not in SQUADRATURA}
     consegnati = [i for i, stato in enumerate(comune["consegna"]) if stato == "consegnato"]
     i = consegnati[-1] if consegnati else None
     righe = {}
     if i is not None:
+        gruppo = comune["gruppo"][i]
+        nel_gruppo = gruppi[gruppo]["voci"] if gruppo else {}
         righe = {
             voce: riga for voce in voci if voce in comune["voci"]
-            and (riga := _riga(voce, comune["voci"][voce], i, voci)) is not None
+            and (riga := _riga(
+                voce, comune["voci"][voce], i, voci,
+                nel_gruppo[voce]["comuni"][i] if voce in nel_gruppo else None,
+            )) is not None
         }
 
     def scegli(prefisso: str) -> list[dict]:
@@ -310,7 +369,7 @@ def contesto(comune: dict, indice: dict, dizionario: dict, gruppi: dict, meta: d
         for voce in PRINCIPALI
         if voce in comune["voci"] and any(v is not None for v in comune["voci"][voce]["procapite"])
     ]
-    fonti = sorted({voci[voce]["fonte"] for voce in comune["voci"]})
+    fonti = sorted({voci[voce]["fonte"] for voce in comune["voci"] if voce in voci})
     residenti = comune["residenti"][i] if i is not None else None
     return {
         "c": comune,
@@ -338,7 +397,8 @@ def contesto(comune: dict, indice: dict, dizionario: dict, gruppi: dict, meta: d
             (r for r in missioni if r["valore"]), key=lambda r: r["valore"], reverse=True
         ),
         "missioni_zero": [r["nome"] for r in missioni if not r["valore"]],
-        "programmi": scegli("spesa_corrente_programma/"),
+        "programmi": (programmi := scegli("spesa_corrente_programma/")),
+        "programmi_zero": any(r["valore"] == 0 for r in programmi),
         "entrate": [r for r in scegli("entrate_titolo/") if r["valore"]],
         "parametri": _parametri(comune, dizionario["parametri"]),
         "grafico": {"anni": comune["anni"], "voci": grafico},
@@ -351,7 +411,7 @@ def contesto(comune: dict, indice: dict, dizionario: dict, gruppi: dict, meta: d
             for ident in [*comune["predecessori"], comune["successore"]] if ident in indice
         },
         "date_dei_dati": _date_dei_dati(meta["data_dei_dati"]),
-        "esportazione": meta["esportazione"],
+        "esportazione": _in_parole(meta["esportazione"]),
         "fonti": fonti,
     }
 
@@ -463,6 +523,11 @@ def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Pat
         for campo in ("nome", "metodo", "nota"):
             if campo in definizione:
                 definizione[campo] = accenti(definizione[campo])
+        if "definizione" in definizione:
+            # la fonte scrive il segno meno come "¿" (e una volta come "?")
+            definizione["definizione"] = (
+                definizione["definizione"].replace("¿", "–").replace("? ", " – ")
+            )
     gruppi = {p.stem: _leggi(p) for p in (ingresso / "gruppi").glob("*.json")}
     elenco = _leggi(ingresso / "comuni.json")
     indice = {riga[0]: dict(zip(elenco["campi"], riga)) for riga in elenco["righe"]}
@@ -479,8 +544,11 @@ def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Pat
         loader=FileSystemLoader(MODELLI), autoescape=True, undefined=StrictUndefined,
         trim_blocks=True, lstrip_blocks=True,
     )
-    ambiente.filters.update(numero=numero, con_unita=con_unita, sopra=sopra, elenca=elenca)
-    ambiente.globals["sito"] = INDIRIZZO_SITO
+    ambiente.filters.update(
+        numero=numero, con_unita=con_unita, sopra=sopra, elenca=elenca,
+        posizione_breve=posizione_breve, articolata=articolata,
+    )
+    ambiente.globals.update(sito=INDIRIZZO_SITO, gruppo_piccolo=GRUPPO_PICCOLO)
     if scelti is None:
         shutil.rmtree(uscita / "comuni", ignore_errors=True)
     shutil.copytree(STATICO, uscita / "statico", dirs_exist_ok=True)

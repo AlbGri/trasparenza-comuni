@@ -13,7 +13,6 @@
 <header class="barra">
   <div class="largo barra-dentro">
     <a class="marchio" href="{{ radice }}">Trasparenza comuni</a>
-    <button type="button" class="lingua" aria-pressed="true" title="Lingua: italiano">IT</button>
   </div>
 </header>
 <main class="largo">
@@ -24,9 +23,8 @@
     <p>Trasparenza comuni: osservatorio civico sui bilanci dei comuni italiani, fatto con i dati
       pubblici di OpenBDAP (Ragioneria Generale dello Stato) e ISTAT. Progetto indipendente, non
       collegato alla Ragioneria Generale dello Stato né ad altri enti pubblici.</p>
+    <p>Segnala un errore: {% block segnala %}per email a <a href="mailto:{{ contatto }}">{{ contatto }}</a> o <a href="{{ segnala }}">su GitHub</a>{% endblock %}.</p>
     <p><a href="{{ radice }}metodo/">Come sono fatti questi numeri</a> ·
-      {% block segnala %}<a href="{{ segnala }}">Segnala un errore</a>{% endblock %} ·
-      {{ contatto }} ·
       <a href="https://github.com/AlbGri/trasparenza-comuni">Codice sorgente</a></p>
     <p class="nota">Nessun cookie, nessun tracciamento.</p>
   </div>

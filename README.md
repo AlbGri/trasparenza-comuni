@@ -3,11 +3,13 @@
 Osservatorio civico sui bilanci dei comuni italiani: quanto spende ogni comune, per quali
 servizi, e come si colloca rispetto ai comuni simili.
 
-Stato: in costruzione. La pipeline produce le tabelle di base (anagrafica dei comuni, rendiconti
-2016-2025, popolazione), i confronti fra comuni simili (pro capite, indicatori ufficiali,
-andamento), l'esportazione in JSON e il sito statico: una pagina per comune con il CSV
-dell'andamento, una per gruppo di comuni simili e anno, ricerca, comuni senza rendiconto,
-pagina del metodo e sitemap. Non c'è ancora un sito pubblicato.
+Stato: online su https://trasparenza-comuni.albgri.com/ (indirizzo di riserva
+https://albgri.github.io/trasparenza-comuni/). Il sito copre tutti gli 8.057 comuni, estinti
+compresi, con i rendiconti dal 2016 al 2025 (il 2025 è provvisorio): una pagina per comune con
+gli indicatori ufficiali, il confronto con i comuni simili, l'andamento negli anni e il CSV
+scaricabile; una pagina per gruppo di comuni simili e anno, la ricerca, i comuni senza
+rendiconto, la pagina del metodo e la sitemap. In preparazione: i pagamenti mensili SIOPE e
+un'API pubblica con i dati in JSON.
 
 ## Obiettivi
 
@@ -22,7 +24,8 @@ Solo dati pubblici ufficiali, citati in ogni pagina:
 
 - OpenBDAP (Ragioneria Generale dello Stato): rendiconti armonizzati dei comuni e indicatori
   ufficiali, dal 2016
-- SIOPE (Banca d'Italia e Ragioneria Generale dello Stato): incassi e pagamenti mensili
+- SIOPE (Banca d'Italia e Ragioneria Generale dello Stato): incassi e pagamenti mensili (in
+  preparazione)
 - ISTAT: elenco dei comuni e popolazione residente
 - IndicePA: anagrafica degli enti
 - Eurostat: indice dei prezzi al consumo armonizzato (IPCA) dell'Italia, calcolato da ISTAT
@@ -30,7 +33,7 @@ Solo dati pubblici ufficiali, citati in ogni pagina:
 ## Come funziona
 
 Una pipeline Python scarica i dati dalle fonti, li pulisce e calcola indicatori e confronti; il
-risultato sono file statici, da cui nasceranno il sito e i dati scaricabili. Non ci sono server
+risultato sono file statici, da cui nascono il sito e i dati scaricabili. Non ci sono server
 né database in rete.
 
 ## Installazione

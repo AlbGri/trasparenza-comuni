@@ -8,7 +8,7 @@ import logging
 import re
 import shutil
 import unicodedata
-from datetime import date
+from datetime import date, datetime
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
@@ -40,6 +40,12 @@ FONTE_RISULTATO = (
 FONTE_INDICATORI = "OpenBDAP, Rendiconto, Piano degli indicatori, Sintetici Allegato 2-a"
 PRO_CAPITE = "diviso i residenti ISTAT al 1 gennaio dell'anno dopo"
 SENZA_GIRO = "senza partite di giro e restituzione delle anticipazioni di cassa"
+FONTI_ESTERNE = {
+    "istat_popolazione": "demo.istat.it/",
+    "istat_comuni": "istat.it/storage/codici-unita-amministrative/",
+    "indicepa": "indicepa.gov.it/",
+    "eurostat_prezzi": "ec.europa.eu/eurostat/",
+}
 
 
 def in_ascii(testo: str) -> str:
@@ -240,6 +246,26 @@ def _date_dei_dati(versioni: pd.DataFrame, anni: list[int]) -> dict[str, str]:
     return date_anno
 
 
+def _giorno(testo: str) -> date:
+    """Giorno di una data scritta come negli header HTTP o, per Eurostat, in ISO."""
+    try:
+        return parsedate_to_datetime(testo).date()
+    except (TypeError, ValueError):
+        return datetime.fromisoformat(testo).date()
+
+
+def _date_fonti(versioni: pd.DataFrame) -> dict[str, str]:
+    """Data dei file di ISTAT, IndicePA ed Eurostat usati (la piu' recente di ogni fonte)."""
+    return {
+        nome: max(
+            _giorno(testo)
+            for testo in versioni.loc[versioni["indirizzo"].str.contains(parte, regex=False),
+                                      "data_file"]
+        ).isoformat()
+        for nome, parte in FONTI_ESTERNE.items()
+    }
+
+
 def _membri_dei_gruppi(gruppi: pd.DataFrame, enti: pd.DataFrame) -> pd.DataFrame:
     """Codici ISTAT dei comuni di ogni gruppo usato: anno, fascia, ambito, membri.
 
@@ -339,6 +365,7 @@ def esporta(cartella: Path = PROCESSED, uscita: Path = EXPORT) -> int:
         "esportazione": date.today().isoformat(),
         "anni": anni,
         "data_dei_dati": _date_dei_dati(versioni, anni),
+        "date_fonti": _date_fonti(versioni),
         "fasce": {str(k): v for k, v in NOMI_FASCE.items()},
         "prezzi": {
             "indice": "IPCA, media annua, 2015 = 100",

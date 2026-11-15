@@ -83,6 +83,11 @@ def test_pagina_generata(comune, tmp_path):
             "esportazione": "2026-11-15", "anni": ANNI,
             "data_dei_dati": {"2023": "2026-11-03", "2024": "2026-11-03"},
             "fasce": {"2": "1.000-5.000"},
+            "date_fonti": {
+                "istat_popolazione": "2026-03-30", "istat_comuni": "2025-01-09",
+                "indicepa": "2026-11-14", "eurostat_prezzi": "2026-02-06",
+            },
+            "prezzi": {"valori": {"2023": 120.9, "2024": 122.3}},
         },
         "dizionario.json": {"voci": VOCI, "parametri": {"0008": "Riscossione minore del 47%"}},
         "comuni.json": {
@@ -109,6 +114,15 @@ def test_pagina_generata(comune, tmp_path):
     assert "Rendiconto 2024: 1 comuni presenti nella banca dati, 0 assenti" in iniziale
     elenco = (tmp_path / "sito/comuni-senza-rendiconto/index.html").read_text(encoding="utf-8")
     assert "Rendiconto 2024 non presente: 0 comuni" in elenco
+    metodo = (tmp_path / "sito/metodo/index.html").read_text(encoding="utf-8")
+    assert "Sei fasce di abitanti: 1.000-5.000." in metodo
+    assert "saliti di circa il 1%" in metodo and "2023-2024: 3 novembre 2026" in metodo
+    sito = "https://trasparenza-comuni.albgri.com/"
+    assert f'<link rel="canonical" href="{sito}comuni/borgo-prova-099001/">' in pagina
+    assert f'<link rel="canonical" href="{sito}metodo/">' in metodo
+    mappa = (tmp_path / "sito/sitemap.xml").read_text(encoding="utf-8")
+    assert mappa.count("<lastmod>2026-11-15</lastmod>") == 4
+    assert f"<loc>{sito}</loc>" in mappa and f"<loc>{sito}comuni/borgo-prova-099001/</loc>" in mappa
     assert json.loads((tmp_path / "sito/cerca.json").read_text(encoding="utf-8")) == {
         "province": ["Roma"], "comuni": [["099001", "Borgo Prova", 0, 1000]],
     }

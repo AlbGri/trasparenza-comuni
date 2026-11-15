@@ -1,5 +1,6 @@
 """Sito statico generato dai file di `data/export/`: pagina iniziale con la ricerca, una pagina
-per comune, pagina dei comuni senza rendiconto e indice della ricerca.
+per comune, pagina dei comuni senza rendiconto, pagina del metodo, indice della ricerca e
+sitemap.
 
 Prima di scrivere controlla la forma di ogni JSON e si ferma al primo file fuori forma: una
 pagina con un numero sbagliato di colonne mostrerebbe numeri sotto l'anno sbagliato.
@@ -21,6 +22,7 @@ SITO = RADICE / "data" / "sito"
 MODELLI = RADICE / "sito" / "modelli"
 STATICO = RADICE / "sito" / "statico"
 REPO = "https://github.com/AlbGri/trasparenza-comuni"
+INDIRIZZO_SITO = "https://trasparenza-comuni.albgri.com/"
 SEGNO_FATTO = SITO / ".generato"
 
 CAMPI = {
@@ -276,6 +278,7 @@ def contesto(comune: dict, indice: dict, dizionario: dict, gruppi: dict, meta: d
     return {
         "c": comune,
         "radice": "../../",
+        "percorso": f"{indirizzo(comune['id'], comune['nome'])}/",
         "anno": comune["anni"][i] if i is not None else None,
         "residenti": comune["residenti"][i] if i is not None else None,
         "senza_residenti": i is not None and comune["residenti"][i] is None,
@@ -369,15 +372,33 @@ def indice_ricerca(indice: dict) -> dict:
     return {"province": province, "comuni": righe}
 
 
+def mappa_del_sito(percorsi: list[str], giorno: str) -> str:
+    """Sitemap XML degli indirizzi pubblici, tutti con lo stesso `lastmod`.
+
+    Args:
+        percorsi: cartelle delle pagine rispetto alla radice, es. `metodo/`.
+        giorno: data ISO dell'esportazione.
+    """
+    voci = "".join(
+        f"<url><loc>{INDIRIZZO_SITO}{percorso}</loc><lastmod>{giorno}</lastmod></url>\n"
+        for percorso in percorsi
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{voci}</urlset>\n"
+    )
+
+
 def _leggi(percorso: Path) -> dict:
     return json.loads(percorso.read_text(encoding="utf-8"))
 
 
 def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Path = SITO) -> int:
-    """Scrive le pagine dei comuni, la pagina iniziale, i comuni senza rendiconto, l'indice
-    della ricerca e i file statici.
+    """Scrive le pagine dei comuni, la pagina iniziale, i comuni senza rendiconto, il metodo,
+    l'indice della ricerca, la sitemap e i file statici.
 
-    La pagina iniziale e quella dei comuni senza rendiconto si costruiscono sempre su tutti i
+    Le pagine generali, l'indice della ricerca e la sitemap si costruiscono sempre su tutti i
     comuni, anche quando se ne sceglie qualcuno.
 
     Args:
@@ -415,28 +436,47 @@ def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Pat
         trim_blocks=True, lstrip_blocks=True,
     )
     ambiente.filters.update(numero=numero, con_unita=con_unita, sopra=sopra)
+    ambiente.globals["sito"] = INDIRIZZO_SITO
     if scelti is None:
         shutil.rmtree(uscita / "comuni", ignore_errors=True)
     shutil.copytree(STATICO, uscita / "statico", dirs_exist_ok=True)
 
     condivisi = {"segnala": f"{REPO}/issues/new", "anni": meta["anni"]}
     elenco_mancanti = mancanti(comuni, indice, meta)
+    prezzi = meta["prezzi"]["valori"]
     pagine = {
-        "index.html": ("iniziale.html", {
+        "": ("iniziale.html", {
             "radice": "", "attivi": sum(v["stato"] == "attivo" for v in indice.values()),
             "ultimo": elenco_mancanti["conteggi"][-1],
         }),
-        "comuni-senza-rendiconto/index.html": ("senza_rendiconto.html", {
+        "comuni-senza-rendiconto/": ("senza_rendiconto.html", {
             "radice": "../", **elenco_mancanti,
+        }),
+        "metodo/": ("metodo.html", {
+            "radice": "../",
+            "fasce": list(meta["fasce"].values()),
+            "date_dei_dati": _date_dei_dati(meta["data_dei_dati"]),
+            "date_fonti": {nome: _in_parole(data) for nome, data in meta["date_fonti"].items()},
+            "esportazione": _in_parole(meta["esportazione"]),
+            "aumento_prezzi": round(
+                100 * (prezzi[str(meta["anni"][-1])] / prezzi[str(meta["anni"][0])] - 1)
+            ),
         }),
     }
     for percorso, (nome_modello, dati) in pagine.items():
-        (uscita / percorso).parent.mkdir(parents=True, exist_ok=True)
-        pagina = ambiente.get_template(nome_modello).render(**condivisi, **dati)
-        (uscita / percorso).write_text(pagina, encoding="utf-8")
+        (uscita / percorso).mkdir(parents=True, exist_ok=True)
+        pagina = ambiente.get_template(nome_modello).render(
+            **condivisi, **dati, percorso=percorso
+        )
+        (uscita / percorso / "index.html").write_text(pagina, encoding="utf-8")
     (uscita / "cerca.json").write_text(
         json.dumps(indice_ricerca(indice), ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",
+    )
+
+    percorsi = [*pagine, *(f"{indirizzo(i, indice[i]['nome'])}/" for i in sorted(indice))]
+    (uscita / "sitemap.xml").write_text(
+        mappa_del_sito(percorsi, meta["esportazione"]), encoding="utf-8"
     )
 
     modello = ambiente.get_template("comune.html")

@@ -2,7 +2,9 @@
 import pandas as pd
 import pytest
 
-from pipeline.esportazione import _serie, dizionario, identificativo_gruppo, voci_per_comune
+from pipeline.esportazione import (
+    _date_fonti, _serie, dizionario, identificativo_gruppo, voci_per_comune,
+)
 from pipeline.prezzi import leggi_jsonstat
 
 
@@ -12,6 +14,27 @@ def test_indice_dei_prezzi_dal_primo_anno_dei_rendiconti():
         "dimension": {"time": {"category": {"index": {"2015": 0, "2016": 1, "2017": 2}}}},
     }
     assert leggi_jsonstat(dati).values.tolist() == [[2016, 99.9], [2017, 101.3]]
+
+
+def test_date_delle_fonti_esterne():
+    versioni = pd.DataFrame({
+        "indirizzo": [
+            "https://demo.istat.it/data/posas/POSAS_2025_it_Comuni.zip",
+            "https://demo.istat.it/data/posas/POSAS_2026_it_Comuni.zip",
+            "https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.csv",
+            "https://indicepa.gov.it/ipa-dati/enti.xlsx",
+            "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/prc_hicp_aind",
+        ],
+        "data_file": [
+            "Fri, 30 Jan 2026 20:47:28 GMT", "Mon, 30 Mar 2026 21:50:38 GMT",
+            "Fri, 26 Jan 2024 10:33:38 GMT", "Sat, 14 Nov 2026 04:18:47 GMT",
+            "2026-02-06T23:00:00+0100",
+        ],
+    })
+    assert _date_fonti(versioni) == {
+        "istat_popolazione": "2026-03-30", "istat_comuni": "2024-01-26", "indicepa": "2026-11-14",
+        "eurostat_prezzi": "2026-02-06",
+    }
 
 
 def test_identificativo_del_gruppo_senza_accenti_ne_spazi():

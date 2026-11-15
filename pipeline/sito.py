@@ -5,6 +5,8 @@ del metodo, indice della ricerca e sitemap.
 Prima di scrivere controlla la forma di ogni JSON e si ferma al primo file fuori forma: una
 pagina con un numero sbagliato di colonne mostrerebbe numeri sotto l'anno sbagliato.
 """
+import csv
+import io
 import json
 import logging
 import re
@@ -420,6 +422,7 @@ def contesto(comune: dict, indice: dict, dizionario: dict, gruppi: dict, meta: d
         "c": comune,
         "radice": "../../",
         "percorso": f"{indirizzo(comune['id'], comune['nome'])}/",
+        "csv": file_csv(comune["id"], comune["nome"]),
         "anno": comune["anni"][i] if i is not None else None,
         "residenti": residenti,
         "piccolissimo": residenti is not None and residenti < PICCOLISSIMI,
@@ -459,6 +462,47 @@ def contesto(comune: dict, indice: dict, dizionario: dict, gruppi: dict, meta: d
         "esportazione": _in_parole(meta["esportazione"]),
         "fonti": fonti,
     }
+
+
+def file_csv(identificativo: str, nome: str) -> str:
+    """Nome del CSV dell'andamento, che resta riconoscibile dopo lo scarico."""
+    return f"andamento-{in_ascii(nome)}-{identificativo}.csv"
+
+
+def andamento_csv(comune: dict, meta: dict) -> str:
+    """Voci principali anno per anno, in CSV per l'Excel italiano: punto e virgola, virgola
+    decimale, un anno per riga anche senza rendiconto (l'assenza e' un dato)."""
+    intestazione = [
+        "Anno", "Rendiconto", "Data dei dati OpenBDAP",
+        "Residenti ISTAT al 1° gennaio dell'anno dopo",
+    ]
+    for voce in PRINCIPALI:
+        intestazione += [
+            f"{NOMI_BREVI[voce]}, euro per abitante",
+            f"{NOMI_BREVI[voce]}, mediana dei comuni simili, euro per abitante",
+            f"{NOMI_BREVI[voce]}, euro in totale",
+        ]
+    righe = [intestazione]
+    for i, anno in enumerate(comune["anni"]):
+        riga = [
+            anno, comune["consegna"][i], meta["data_dei_dati"][str(anno)], comune["residenti"][i]
+        ]
+        for voce in PRINCIPALI:
+            dati = comune["voci"].get(voce, {})
+            riga += [
+                dati[campo][i] if campo in dati else None
+                for campo in ("procapite", "mediana", "importo")
+            ]
+        righe.append(riga)
+
+    def cella(valore: object) -> object:
+        if valore is None:
+            return ""
+        return str(valore).replace(".", ",") if isinstance(valore, float) else valore
+
+    testo = io.StringIO()
+    csv.writer(testo, delimiter=";").writerows([[cella(v) for v in riga] for riga in righe])
+    return testo.getvalue()
 
 
 def mancanti(comuni: dict, indice: dict, meta: dict) -> dict:
@@ -662,6 +706,11 @@ def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Pat
         cartella.mkdir(parents=True, exist_ok=True)
         pagina = modello.render(**condivisi, **contesto(comune, indice, dizionario, gruppi, meta))
         (cartella / "index.html").write_text(pagina, encoding="utf-8")
+        if "consegnato" in comune["consegna"]:
+            # BOM: senza, Excel legge l'UTF-8 come un'altra codifica e rompe gli accenti
+            (cartella / file_csv(ident, comune["nome"])).write_text(
+                andamento_csv(comune, meta), encoding="utf-8-sig", newline=""
+            )
     return len(da_scrivere)
 
 

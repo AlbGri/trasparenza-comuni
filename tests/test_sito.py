@@ -4,7 +4,7 @@ import json
 import pytest
 
 from pipeline.sito import (
-    accenti, articolata, con_unita, controlla, elenca, genera, indice_ricerca, mancanti, numero,
+    accenti, andamento_csv, articolata, con_unita, controlla, elenca, genera, indice_ricerca, mancanti, numero,
     posizione_breve, sopra,
 )
 
@@ -168,6 +168,15 @@ def test_pagina_generata(comune, tmp_path):
     assert 'class="lingua"' not in pagina
     oggetto = "Errore%20nella%20pagina%20di%20Borgo%20Prova%20%28099001%29"
     assert f'<a href="mailto:trasparenza-comuni@albgri.com?subject={oggetto}">' in pagina
+    assert '<a href="andamento-borgo-prova-099001.csv" download>' in pagina
+    assert (
+        "«Elaborazione di Trasparenza comuni su dati OpenBDAP (Ragioneria Generale dello Stato) "
+        "e ISTAT, rendiconto 2024, dati del 3 novembre 2026», "
+        "https://trasparenza-comuni.albgri.com/comuni/borgo-prova-099001/"
+    ) in pagina
+    assert pagina.count(f'<a href="mailto:trasparenza-comuni@albgri.com?subject={oggetto}">') == 2
+    csv = (tmp_path / "sito/comuni/borgo-prova-099001/andamento-borgo-prova-099001.csv")
+    assert csv.read_bytes().startswith(b"\xef\xbb\xbfAnno;Rendiconto;")
     assert "cdn.plot.ly" not in pagina
     assert (tmp_path / "sito/statico/plotly-basic-2.35.2.min.js").exists()
     assert "Trasporti e diritto alla mobilità" in pagina
@@ -191,6 +200,17 @@ def test_pagina_generata(comune, tmp_path):
     assert json.loads((tmp_path / "sito/cerca.json").read_text(encoding="utf-8")) == {
         "province": ["Roma"], "comuni": [["099001", "Borgo Prova", 0, 1000]],
     }
+
+
+def test_andamento_csv(comune):
+    comune["consegna"][0] = "non consegnato"
+    comune["voci"]["spesa_titolo/01"]["importo"][1] = 1234567.89
+    meta = {"data_dei_dati": {"2023": "2026-05-08", "2024": "2026-11-03"}}
+    righe = andamento_csv(comune, meta).splitlines()
+    assert len(righe) == 3 and righe[0].count(";") == 15
+    assert righe[1].startswith("2023;non consegnato;2026-05-08;1000;1100;900;1100000;")
+    # voce assente dal JSON: celle vuote
+    assert righe[2] == "2024;consegnato;2026-11-03;1000;1234;950;1234567,89" + ";" * 9
 
 
 def test_json_fuori_forma_ferma_la_generazione(comune, tmp_path):

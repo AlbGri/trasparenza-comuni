@@ -61,7 +61,7 @@
   {% endif %}
   <dl class="dati-ente">
     {% if residenti %}<div><dt>Residenti al 1° gennaio {{ anno + 1 }}</dt><dd>{{ residenti|numero }}</dd></div>{% endif %}
-    {% if gruppo %}<div><dt>Confrontato con</dt><dd>{{ gruppo.descrizione }}: {{ gruppo.consegnati|numero }} su {{ gruppo.comuni|numero }} con il rendiconto {{ anno }}</dd></div>{% endif %}
+    {% if gruppo %}<div><dt>Confrontato con</dt><dd><a href="{{ radice }}{{ gruppo.indirizzo }}/">{{ gruppo.descrizione }}</a>: {{ gruppo.consegnati|numero }} su {{ gruppo.comuni|numero }} con il rendiconto {{ anno }}</dd></div>{% endif %}
     <div><dt>Codice ISTAT</dt><dd>{{ c.id }}</dd></div>
     <div><dt>Codice fiscale</dt><dd>{{ c.codice_fiscale }}</dd></div>
   </dl>

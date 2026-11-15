@@ -5,8 +5,8 @@ servizi, e come si colloca rispetto ai comuni simili.
 
 Stato: in costruzione. La pipeline produce le tabelle di base (anagrafica dei comuni, rendiconti
 2016-2025, popolazione), i confronti fra comuni simili (pro capite, indicatori ufficiali,
-andamento), l'esportazione in JSON e il sito statico: una pagina per comune, ricerca, comuni
-senza rendiconto, pagina del metodo e sitemap. Non c'è ancora un sito pubblicato.
+andamento), l'esportazione in JSON e il sito statico: una pagina per comune, una per gruppo di
+comuni simili e anno, ricerca, comuni senza rendiconto, pagina del metodo e sitemap. Non c'è ancora un sito pubblicato.
 
 ## Obiettivi
 

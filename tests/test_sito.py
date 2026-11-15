@@ -127,8 +127,9 @@ def test_pagina_generata(comune, tmp_path):
             "righe": [["099001", "Borgo Prova", "Roma", "Lazio", "attivo", 1000]],
         },
         "gruppi/2-centro.json": {
-            "id": "2-centro", "fascia": "1.000-5.000", "ambito": "Centro",
-            "comuni": [175, 180], "consegnati": [170, 172],
+            "id": "2-centro", "fascia": "1.000-5.000", "ambito": "Centro", "livello": "area",
+            "anni": ANNI, "comuni": [175, 180], "consegnati": [170, 172],
+            "membri": [None, ["099001"]],
             # i trasporti hanno un valore solo in 10 comuni del gruppo: si contano
             "voci": {
                 "spesa_titolo/01": {"comuni": [170, 172]},
@@ -144,7 +145,19 @@ def test_pagina_generata(comune, tmp_path):
     pagina = (tmp_path / "sito/comuni/borgo-prova-099001/index.html").read_text(encoding="utf-8")
     assert "Comune di Borgo Prova" in pagina
     assert "1.234 €" in pagina and "sopra l&#39;84% dei comuni simili" in pagina
-    assert "comuni da 1.000 a 5.000 abitanti, Centro: 172 su 180 con il rendiconto 2024" in pagina
+    assert (
+        '<a href="../../gruppi/2-centro/2024/">comuni da 1.000 a 5.000 abitanti, Centro</a>: '
+        "172 su 180 con il rendiconto 2024"
+    ) in pagina
+    gruppo = (tmp_path / "sito/gruppi/2-centro/2024/index.html").read_text(encoding="utf-8")
+    assert "<h1>Comuni da 1.000 a 5.000 abitanti, Centro</h1>" in gruppo
+    assert (
+        "i comuni delle regioni a statuto ordinario dell&#39;area Centro nella fascia "
+        "1.000-5.000 abitanti, contando i residenti ISTAT al 1° gennaio 2025"
+    ) in gruppo
+    assert '<a href="../../../comuni/borgo-prova-099001/">Borgo Prova</a>' in gruppo
+    assert "<td>Roma</td><td>1.000</td><td>consegnato</td>" in gruppo
+    assert not (tmp_path / "sito/gruppi/2-centro/2023").exists()
     assert "progetto indipendente: non è del Comune di Borgo Prova" in pagina
     assert "escluso da una regola del sito" in pagina
     assert "Parametri non presenti nella banca dati OpenBDAP per il 2023" in pagina
@@ -172,7 +185,8 @@ def test_pagina_generata(comune, tmp_path):
     assert f'<link rel="canonical" href="{sito}comuni/borgo-prova-099001/">' in pagina
     assert f'<link rel="canonical" href="{sito}metodo/">' in metodo
     mappa = (tmp_path / "sito/sitemap.xml").read_text(encoding="utf-8")
-    assert mappa.count("<lastmod>2026-11-15</lastmod>") == 4
+    assert mappa.count("<lastmod>2026-11-15</lastmod>") == 5
+    assert f"<loc>{sito}gruppi/2-centro/2024/</loc>" in mappa
     assert f"<loc>{sito}</loc>" in mappa and f"<loc>{sito}comuni/borgo-prova-099001/</loc>" in mappa
     assert json.loads((tmp_path / "sito/cerca.json").read_text(encoding="utf-8")) == {
         "province": ["Roma"], "comuni": [["099001", "Borgo Prova", 0, 1000]],

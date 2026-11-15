@@ -1,6 +1,6 @@
 """Sito statico generato dai file di `data/export/`: pagina iniziale con la ricerca, una pagina
-per comune, pagina dei comuni senza rendiconto, pagina del metodo, indice della ricerca e
-sitemap.
+per comune, una per gruppo di comuni simili e anno, pagina dei comuni senza rendiconto, pagina
+del metodo, indice della ricerca e sitemap.
 
 Prima di scrivere controlla la forma di ogni JSON e si ferma al primo file fuori forma: una
 pagina con un numero sbagliato di colonne mostrerebbe numeri sotto l'anno sbagliato.
@@ -13,6 +13,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
+from pipeline.confronti import AREE_ORDINARIE, ITALIA, MINIMO_GRUPPO
 from pipeline.esportazione import PRO_CAPITE, in_ascii
 from pipeline.fonti import EXPORT, RADICE
 
@@ -117,6 +118,11 @@ def controlla(comune: dict, anni: list[int], voci: dict, gruppi: dict) -> list[s
 def indirizzo(identificativo: str, nome: str) -> str:
     """Cartella della pagina di un comune, es. `comuni/bologna-037006`."""
     return f"comuni/{in_ascii(nome)}-{identificativo}"
+
+
+def indirizzo_gruppo(identificativo: str, anno: int) -> str:
+    """Cartella della pagina di un gruppo in un anno, es. `gruppi/2-centro/2024`."""
+    return f"gruppi/{identificativo}/{anno}"
 
 
 def accenti(testo: str) -> str:
@@ -264,6 +270,45 @@ def _gruppo(identificativo: str | None, i: int, gruppi: dict) -> dict | None:
         "descrizione": f"comuni {abitanti} abitanti, {ambito}",
         "consegnati": gruppo["consegnati"][i],
         "comuni": gruppo["comuni"][i],
+        "indirizzo": indirizzo_gruppo(identificativo, gruppo["anni"][i]),
+    }
+
+
+def pagina_gruppo(identificativo: str, i: int, gruppi: dict, comuni: dict, indice: dict) -> dict:
+    """Regola e comuni di un gruppo nell'anno di indice i, in ordine alfabetico.
+
+    Args:
+        identificativo: nome del file del gruppo, es. `2-centro`.
+        i: indice dell'anno.
+        gruppi: gruppi esportati, per identificativo.
+        comuni: JSON dei comuni, per codice ISTAT.
+        indice: righe di `comuni.json`, per codice ISTAT.
+    """
+    gruppo = gruppi[identificativo]
+    ambito, livello = gruppo["ambito"], gruppo["livello"]
+    if livello == ITALIA:
+        dove = "di tutta Italia"
+    elif livello != "area":
+        dove = f"di tutte le {AMBITI.get(ambito, ambito)}"
+    elif ambito in AREE_ORDINARIE.values():
+        dove = f"delle regioni a statuto ordinario dell'area {ambito}"
+    else:
+        dove = f"della regione {ambito}"
+    membri = [
+        {
+            "nome": indice[ident]["nome"], "provincia": indice[ident]["provincia"],
+            "estinto": indice[ident]["stato"] == "estinto",
+            "indirizzo": indirizzo(ident, indice[ident]["nome"]),
+            "residenti": comuni[ident]["residenti"][i], "consegna": comuni[ident]["consegna"][i],
+        }
+        for ident in gruppo["membri"][i]
+    ]
+    return {
+        "g": {**_gruppo(identificativo, i, gruppi), "fascia": gruppo["fascia"]},
+        "anno": gruppo["anni"][i],
+        "dove": dove,
+        "allargato": livello != "area",
+        "membri": sorted(membri, key=lambda m: (in_ascii(m["nome"]), m["provincia"])),
     }
 
 
@@ -500,10 +545,10 @@ def _leggi(percorso: Path) -> dict:
 
 def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Path = SITO) -> int:
     """Scrive le pagine dei comuni, la pagina iniziale, i comuni senza rendiconto, il metodo,
-    l'indice della ricerca, la sitemap e i file statici.
+    le pagine dei gruppi, l'indice della ricerca, la sitemap e i file statici.
 
-    Le pagine generali, l'indice della ricerca e la sitemap si costruiscono sempre su tutti i
-    comuni, anche quando se ne sceglie qualcuno.
+    Le pagine generali, quelle dei gruppi, l'indice della ricerca e la sitemap si costruiscono
+    sempre su tutti i comuni, anche quando se ne sceglie qualcuno.
 
     Args:
         scelti: codici ISTAT dei comuni di cui scrivere la pagina; None = tutti, e le pagine
@@ -539,6 +584,10 @@ def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Pat
         if problemi := controlla(comune, meta["anni"], dizionario["voci"], gruppi):
             raise ValueError(f"comuni/{ident}.json fuori forma: {'; '.join(problemi[:5])}")
         comuni[ident] = comune
+    for ident, gruppo in gruppi.items():
+        ignoti = {m for membri in gruppo["membri"] if membri for m in membri} - set(indice)
+        if gruppo["anni"] != meta["anni"] or ignoti:
+            raise ValueError(f"gruppi/{ident}.json fuori forma: anni o membri non attesi")
 
     ambiente = Environment(
         loader=FileSystemLoader(MODELLI), autoescape=True, undefined=StrictUndefined,
@@ -548,7 +597,9 @@ def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Pat
         numero=numero, con_unita=con_unita, sopra=sopra, elenca=elenca,
         posizione_breve=posizione_breve, articolata=articolata,
     )
-    ambiente.globals.update(sito=INDIRIZZO_SITO, gruppo_piccolo=GRUPPO_PICCOLO)
+    ambiente.globals.update(
+        sito=INDIRIZZO_SITO, gruppo_piccolo=GRUPPO_PICCOLO, minimo_gruppo=MINIMO_GRUPPO
+    )
     if scelti is None:
         shutil.rmtree(uscita / "comuni", ignore_errors=True)
     shutil.copytree(STATICO, uscita / "statico", dirs_exist_ok=True)
@@ -578,6 +629,15 @@ def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Pat
             ),
         }),
     }
+    # le pagine dei gruppi dipendono da tutti i comuni: si rifanno sempre tutte
+    shutil.rmtree(uscita / "gruppi", ignore_errors=True)
+    pagine.update({
+        f"{indirizzo_gruppo(ident, anno)}/": ("gruppo.html", {
+            "radice": "../../../", **pagina_gruppo(ident, i, gruppi, comuni, indice),
+        })
+        for ident, gruppo in sorted(gruppi.items())
+        for i, anno in enumerate(meta["anni"]) if gruppo["membri"][i] is not None
+    })
     for percorso, (nome_modello, dati) in pagine.items():
         (uscita / percorso).mkdir(parents=True, exist_ok=True)
         pagina = ambiente.get_template(nome_modello).render(

@@ -32,6 +32,8 @@ MINIMO_GRUPPO = 20
 
 # Voci in euro pro capite: impegni della spesa e accertamenti delle entrate (competenza), senza
 # partite di giro e anticipazioni, e parte disponibile del risultato di amministrazione.
+# Le entrate proprie sono i titoli 1 e 3 senza i fondi perequativi (tipologie 0301-0302), che
+# il bilancio mette nel titolo 1 ma che distribuiscono Stato e regioni.
 # `fonte` dice di quale tabella il comune deve essere presente perche' una voce assente valga
 # zero.
 VOCI = """
@@ -48,7 +50,8 @@ SELECT cf, 'entrate', 'entrate_titolo', titolo, sum(accertamenti)
     FROM entrate WHERE NOT esclusa GROUP BY ALL
 UNION ALL
 SELECT cf, 'entrate', 'entrate_proprie', '01+03', sum(accertamenti)
-    FROM entrate WHERE titolo IN ('01', '03') GROUP BY ALL
+    FROM entrate WHERE titolo IN ('01', '03') AND tipologia NOT IN ('0301', '0302')
+    GROUP BY ALL
 UNION ALL
 SELECT cf, 'risultato', 'risultato_disponibile', voce, valore
     FROM risultato WHERE voce = '0502'

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from pipeline.esportazione import in_ascii
+from pipeline.esportazione import PRO_CAPITE, in_ascii
 from pipeline.fonti import EXPORT, RADICE
 
 log = logging.getLogger(__name__)
@@ -24,10 +24,12 @@ STATICO = RADICE / "sito" / "statico"
 REPO = "https://github.com/AlbGri/trasparenza-comuni"
 INDIRIZZO_SITO = "https://trasparenza-comuni.albgri.com/"
 SEGNO_FATTO = SITO / ".generato"
+CONTATTO = "trasparenza-comuni@albgri.com"
 
 CAMPI = {
     "id": str, "nome": str, "provincia": str, "regione": str, "codice_fiscale": str,
-    "stato": str, "successore": (str, type(None)), "predecessori": list, "anni": list,
+    "stato": str, "successore": (str, type(None)), "cessazione": (str, type(None)),
+    "predecessori": list, "anni": list,
     "consegna": list, "residenti": list, "gruppo": list, "voci": dict,
     "parametri_accesi": list, "deficitario": list,
 }
@@ -66,6 +68,9 @@ AMBITI = {
     "Italia": "tutta Italia",
 }
 PARAMETRO_DEFICITARIO = "0010"
+PRIMO_ANNO_PARAMETRI = 2019
+# sotto questa soglia i costi fissi pesano sui valori per abitante: la pagina lo ricorda
+PICCOLISSIMI = 300
 ACCENTATE = dict(zip("aeiou", "àèìòù"))
 
 
@@ -134,6 +139,12 @@ def con_unita(valore: float | None, unita: str) -> str:
     return f"{numero(valore)} €"
 
 
+def elenca(valori: list) -> str:
+    """Elenco a parole, es. '2019, 2020 e 2021'."""
+    testi = [str(v) for v in valori]
+    return " e ".join([", ".join(testi[:-1]), testi[-1]]) if len(testi) > 1 else "".join(testi)
+
+
 def sopra(posizione: int | None) -> str:
     """Posizione nel gruppo detta a parole, senza giudizi."""
     if posizione is None:
@@ -147,8 +158,12 @@ def sopra(posizione: int | None) -> str:
 
 
 def _riga(voce: str, dati: dict, i: int, dizionario: dict) -> dict | None:
-    """Numeri di una voce nell'anno di indice i, pronti per il modello; None se manca."""
+    """Numeri di una voce nell'anno di indice i, pronti per il modello.
+
+    Un indicatore senza valore ma con il motivo resta, come "n.d."; senza motivo, None.
+    """
     definizione = dizionario[voce]
+    motivo = dati["motivo"][i] if "motivo" in dati else None
     if "valore" in dati:
         valore, unita = dati["valore"][i], definizione["unita"]
     elif dati["procapite"][i] is not None:
@@ -156,8 +171,11 @@ def _riga(voce: str, dati: dict, i: int, dizionario: dict) -> dict | None:
     else:
         # ente senza residenti: resta l'importo, senza pro capite ne' confronto
         valore, unita = dati["importo"][i], "euro"
-    if valore is None:
+    if valore is None and motivo is None:
         return None
+    spiegazione = definizione.get("metodo") or definizione.get("nota", "")
+    if unita == "euro":
+        spiegazione = spiegazione.replace(f", {PRO_CAPITE}", "")
     nome = NOMI_BREVI.get(voce, definizione["nome"].split(": ", 1)[-1])
     return {
         "voce": voce,
@@ -168,11 +186,12 @@ def _riga(voce: str, dati: dict, i: int, dizionario: dict) -> dict | None:
         "testo": con_unita(valore, unita),
         "mediana": dati["mediana"][i] if unita != "euro" else None,
         "posizione": dati["posizione"][i] if unita != "euro" else None,
+        "motivo": motivo,
         "importo": dati["importo"][i] if "importo" in dati else None,
         "misura": definizione["misura"],
         "fonte": definizione["fonte"],
         "calcolato": definizione["calcolato"],
-        "spiegazione": definizione.get("metodo") or definizione.get("nota", ""),
+        "spiegazione": spiegazione,
         "definizione": definizione.get("definizione", ""),
     }
 
@@ -191,22 +210,35 @@ def _gruppo(identificativo: str | None, i: int, gruppi: dict) -> dict | None:
     return {
         "descrizione": f"comuni {abitanti} abitanti, {ambito}",
         "consegnati": gruppo["consegnati"][i],
+        "comuni": gruppo["comuni"][i],
     }
 
 
 def _parametri(comune: dict, testi: dict) -> dict:
-    """Parametri di deficitarieta' accesi almeno una volta, anno per anno, dal 2019."""
+    """Parametri di deficitarieta' accesi almeno una volta, anno per anno, dal 2019.
+
+    Un anno con il rendiconto ma senza parametri e' un'assenza della fonte, non "nessun
+    parametro acceso": resta in tabella con None e si elenca in `assenti`.
+    """
     anni = [
         (anno, accesi, deficitario)
-        for anno, accesi, deficitario in zip(
-            comune["anni"], comune["parametri_accesi"], comune["deficitario"]
-        ) if accesi is not None
+        for anno, accesi, deficitario, consegna in zip(
+            comune["anni"], comune["parametri_accesi"], comune["deficitario"], comune["consegna"]
+        ) if accesi is not None or (consegna == "consegnato" and anno >= PRIMO_ANNO_PARAMETRI)
     ]
-    codici = sorted({c for _, accesi, _ in anni for c in accesi} - {PARAMETRO_DEFICITARIO})
+    codici = sorted(
+        {c for _, accesi, _ in anni for c in accesi or []} - {PARAMETRO_DEFICITARIO}
+    )
     return {
         "anni": [anno for anno, _, _ in anni],
+        "presenti": [anno for anno, accesi, _ in anni if accesi is not None],
+        "assenti": [anno for anno, accesi, _ in anni if accesi is None],
         "righe": [
-            {"testo": testi[c], "accesi": [c in accesi for _, accesi, _ in anni]} for c in codici
+            {
+                "testo": testi[c],
+                "accesi": [None if accesi is None else c in accesi for _, accesi, _ in anni],
+            }
+            for c in codici
         ],
         "deficitario": [deficitario for _, _, deficitario in anni],
     }
@@ -233,7 +265,11 @@ def _date_dei_dati(date: dict) -> list[str]:
 
 
 def contesto(comune: dict, indice: dict, dizionario: dict, gruppi: dict, meta: dict) -> dict:
-    """Tutto cio' che il modello della pagina mostra, gia' scelto e ordinato."""
+    """Tutto cio' che il modello della pagina mostra, gia' scelto e ordinato.
+
+    Cio' che dipende da tutti i comuni (rendiconti mancanti dell'ultimo anno) lo aggiunge
+    `genera`.
+    """
     voci = dizionario["voci"]
     consegnati = [i for i, stato in enumerate(comune["consegna"]) if stato == "consegnato"]
     i = consegnati[-1] if consegnati else None
@@ -275,12 +311,21 @@ def contesto(comune: dict, indice: dict, dizionario: dict, gruppi: dict, meta: d
         if voce in comune["voci"] and any(v is not None for v in comune["voci"][voce]["procapite"])
     ]
     fonti = sorted({voci[voce]["fonte"] for voce in comune["voci"]})
+    residenti = comune["residenti"][i] if i is not None else None
     return {
         "c": comune,
         "radice": "../../",
         "percorso": f"{indirizzo(comune['id'], comune['nome'])}/",
         "anno": comune["anni"][i] if i is not None else None,
-        "residenti": comune["residenti"][i] if i is not None else None,
+        "residenti": residenti,
+        "piccolissimo": residenti is not None and residenti < PICCOLISSIMI,
+        "provvisorio": i == len(comune["anni"]) - 1,
+        "mancano_dopo": [
+            anno for anno, stato in zip(comune["anni"], comune["consegna"])
+            if i is not None and anno > comune["anni"][i] and stato == "non consegnato"
+        ],
+        "cessazione": _in_parole(comune["cessazione"]) if comune["cessazione"] else None,
+        "con_residenti": any(r is not None for r in comune["residenti"]),
         "senza_residenti": i is not None and comune["residenti"][i] is None,
         "gruppo": _gruppo(comune["gruppo"][i], i, gruppi) if i is not None else None,
         "consegne": list(zip(comune["anni"], comune["consegna"])),
@@ -308,7 +353,6 @@ def contesto(comune: dict, indice: dict, dizionario: dict, gruppi: dict, meta: d
         "date_dei_dati": _date_dei_dati(meta["data_dei_dati"]),
         "esportazione": meta["esportazione"],
         "fonti": fonti,
-        "segnala": f"{REPO}/issues/new",
     }
 
 
@@ -435,14 +479,17 @@ def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Pat
         loader=FileSystemLoader(MODELLI), autoescape=True, undefined=StrictUndefined,
         trim_blocks=True, lstrip_blocks=True,
     )
-    ambiente.filters.update(numero=numero, con_unita=con_unita, sopra=sopra)
+    ambiente.filters.update(numero=numero, con_unita=con_unita, sopra=sopra, elenca=elenca)
     ambiente.globals["sito"] = INDIRIZZO_SITO
     if scelti is None:
         shutil.rmtree(uscita / "comuni", ignore_errors=True)
     shutil.copytree(STATICO, uscita / "statico", dirs_exist_ok=True)
 
-    condivisi = {"segnala": f"{REPO}/issues/new", "anni": meta["anni"]}
     elenco_mancanti = mancanti(comuni, indice, meta)
+    condivisi = {
+        "segnala": f"{REPO}/issues/new", "anni": meta["anni"], "contatto": CONTATTO,
+        "consegne_ultimo": elenco_mancanti["conteggi"][-1],
+    }
     prezzi = meta["prezzi"]["valori"]
     pagine = {
         "": ("iniziale.html", {
@@ -485,7 +532,7 @@ def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Pat
         comune = comuni[ident]
         cartella = uscita / indirizzo(ident, comune["nome"])
         cartella.mkdir(parents=True, exist_ok=True)
-        pagina = modello.render(contesto(comune, indice, dizionario, gruppi, meta))
+        pagina = modello.render(**condivisi, **contesto(comune, indice, dizionario, gruppi, meta))
         (cartella / "index.html").write_text(pagina, encoding="utf-8")
     return len(da_scrivere)
 

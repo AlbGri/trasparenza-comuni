@@ -13,6 +13,16 @@
   limiti dei numeri, fonti con le date.
 - Sitemap di tutte le pagine e indirizzo canonico su trasparenza-comuni.albgri.com, per i
   motori di ricerca.
+- Revisione prima della pubblicazione: ogni pagina dice sotto il titolo che il progetto è
+  indipendente; le entrate proprie non comprendono più i fondi perequativi dello Stato; gli
+  indicatori ufficiali assenti restano come "n.d." con il motivo; i parametri di
+  deficitarietà mancanti nella banca dati sono detti tali; avvisi per i comuni estinti (con la
+  data) e per quelli con l'ultimo rendiconto vecchio; il 2025 è indicato come provvisorio;
+  "N su M con il rendiconto" accanto ai comuni simili; nota sui comuni sotto i 300 abitanti.
+- Metodo: entrate proprie, comuni piccolissimi, differenze con i gruppi del portale OpenBDAP,
+  ultimo anno provvisorio, licenze delle fonti, come citare, contatti e privacy.
+- Indirizzo email per le segnalazioni; nessun file caricato da altri siti (il grafico è servito
+  dal sito stesso), nessun cookie.
 
 ## 2026-11-14
 

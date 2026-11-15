@@ -73,6 +73,7 @@ th[scope="row"], thead th:first-child { text-align: left; white-space: normal; m
 thead th { font-size: .8rem; color: var(--tenue); font-weight: 600; vertical-align: bottom; white-space: normal; }
 tr.mediana th, tr.mediana td { color: var(--tenue); font-weight: 400; font-size: .85rem; }
 table.parametri td { text-align: center; }
+td.motivo { text-align: left; white-space: normal; color: var(--tenue); }
 tr.totale th, tr.totale td { font-weight: 700; }
 
 .scelta { display: block; margin: .6rem 0; }

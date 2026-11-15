@@ -1,9 +1,10 @@
-"""Indice dei prezzi, nomi dei gruppi, serie a colonne e dizionario dell'esportazione."""
+"""Indice dei prezzi, nomi dei gruppi, serie a colonne, indicatori assenti e dizionario."""
+import duckdb
 import pandas as pd
 import pytest
 
 from pipeline.esportazione import (
-    _date_fonti, _serie, dizionario, identificativo_gruppo, voci_per_comune,
+    _date_fonti, _serie, dizionario, identificativo_gruppo, indicatori_assenti, voci_per_comune,
 )
 from pipeline.prezzi import leggi_jsonstat
 
@@ -90,6 +91,7 @@ def test_voci_per_comune():
         "posizione": [50.4, 40.0, 70.0, 10.0],
         "scarto": [12.34, float("nan"), float("nan"), float("nan")],
         "mediana": [11.2, 9.0, 5.555, float("nan")],
+        "motivo": [None, None, None, None],
     })
     voci = voci_per_comune(righe, [2016, 2017, 2018])
     assert list(voci["A"]) == ["indicatore/09.05", "spesa_titolo/01"]
@@ -98,9 +100,32 @@ def test_voci_per_comune():
         "posizione": [40, 50, None], "mediana": [9, 11, None], "scarto": [None, 12.3, None],
     }
     assert voci["A"]["indicatore/09.05"] == {
-        "valore": [12.35, None, None], "posizione": [70, None, None],
-        "mediana": [5.55, None, None],
+        "valore": [12.35, None, None], "motivo": [None, None, None],
+        "posizione": [70, None, None], "mediana": [5.55, None, None],
     }
     assert voci["B"]["spesa_titolo/01"]["mediana"] == [None, None, None]
     with pytest.raises(ValueError, match="ripetute"):
         voci_per_comune(pd.concat([righe, righe.head(1)]), [2016, 2017])
+
+
+def test_indicatori_assenti_con_il_motivo(tmp_path):
+    # a: 9.5 scritto ma scartato, 1.1 vuoto, 3.1 assente dal piano; b senza piano; c senza
+    # residenti (fuori dai confronti)
+    pd.DataFrame({
+        "cf": ["a", "a", "a", "c"], "anno": 2025,
+        "gruppo": ["09", "01", "04", "01"], "indicatore": ["05", "01", "01", "01"],
+        "valore": [0.0, None, 30.0, 5.0],
+    }).to_parquet(tmp_path / "2025.parquet")
+    posizioni = pd.DataFrame({
+        "cf": ["a"], "anno": [2025], "misura": ["indicatore"], "codice": ["04.01"],
+    })
+    gruppi = pd.DataFrame({
+        "cf": ["a", "b", "c"], "anno": 2025, "stato": "consegnato", "fascia": [2, 2, None],
+    })
+    assenti = indicatori_assenti(duckdb.connect(), tmp_path, posizioni, gruppi)
+    motivi = dict(zip(assenti["codice"], assenti["motivo"]))
+    assert set(assenti["cf"]) == {"a"}
+    assert "04.01" not in motivi
+    assert (motivi["09.05"], motivi["01.01"], motivi["03.01"]) == (
+        "escluso", "non compilato", "non compilato",
+    )

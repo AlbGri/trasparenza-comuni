@@ -94,10 +94,12 @@ def test_pro_capite_zeri_e_posizioni():
         "esclusa": [False, False, False, False, True],
     })
     # "c" non ha consegnato le entrate: niente zeri inventati
+    # il fondo perequativo di a (tipologia 0301) sta nel titolo 1 ma non fra le entrate proprie
     entrate = pd.DataFrame({
-        "cf": ["a", "a", "b"], "titolo": ["01", "09", "03"],
-        "accertamenti": [Decimal(v) for v in ("300", "7000", "800")],
-        "esclusa": [False, True, False],
+        "cf": ["a", "a", "a", "b"], "titolo": ["01", "01", "09", "03"],
+        "tipologia": ["0101", "0301", "0100", "0300"],
+        "accertamenti": [Decimal(v) for v in ("300", "200", "7000", "800")],
+        "esclusa": [False, False, True, False],
     })
     risultato = pd.DataFrame({
         "cf": ["a", "b"], "voce": ["0502", "0502"],
@@ -128,6 +130,7 @@ def test_pro_capite_zeri_e_posizioni():
     assert valori.loc[("spesa_titolo", "01"), "posizione"].tolist() == [0.0, 100.0, 0.0]
     assert valori.loc[("spesa_titolo", "02", "b"), "importo"] == 0
     assert valori.loc[("entrate_proprie", "01+03"), "valore"].tolist() == [0.3, 0.4]
+    assert valori.loc[("entrate_titolo", "01", "a"), "valore"] == 0.5
     assert ("entrate_titolo", "09", "a") not in valori.index
     assert valori.loc[("risultato_disponibile", "0502"), "valore"].tolist() == [-0.5, 0.1]
     # l'indicatore vuoto di b resta fuori, non vale zero
@@ -153,7 +156,7 @@ def test_senza_residenti_solo_importi():
     vuota = pd.DataFrame({"cf": pd.Series(dtype=str)})
     tabelle = {
         "spese": spese,
-        "entrate": vuota.assign(titolo="", accertamenti=0, esclusa=False),
+        "entrate": vuota.assign(titolo="", tipologia="", accertamenti=0, esclusa=False),
         "risultato": vuota.assign(voce="", valore=0),
         "indicatori_ufficiali": pd.DataFrame({
             "cf": ["x"], "gruppo": ["04"], "indicatore": ["04"], "valore": [Decimal("12")],
@@ -185,7 +188,7 @@ def test_andamento_scarto_dalla_mediana_delle_variazioni():
     vuota = pd.DataFrame({"cf": pd.Series(dtype=str)})
     tabelle = {
         "spese": spese,
-        "entrate": vuota.assign(titolo="", accertamenti=0, esclusa=False),
+        "entrate": vuota.assign(titolo="", tipologia="", accertamenti=0, esclusa=False),
         "risultato": vuota.assign(voce="", valore=0),
         "indicatori_ufficiali": vuota.assign(gruppo="", indicatore="", valore=0),
     }

@@ -15,9 +15,11 @@
       <li><a href="#mediana">Mediana e posizione, non la media</a></li>
       <li><a href="#assenti">Valori trattati come assenti</a></li>
       <li><a href="#non-consegnato">Rendiconto non consegnato</a></li>
+      <li><a href="#provvisori">L'ultimo anno è provvisorio</a></li>
       <li><a href="#fusioni">Comuni estinti e fusioni</a></li>
       <li><a href="#limiti">Che cosa non si può concludere da questi numeri</a></li>
-      <li><a href="#fonti">Fonti e date dei dati</a></li>
+      <li><a href="#fonti">Fonti, licenze e date dei dati</a></li>
+      <li><a href="#contatti">Contatti e privacy</a></li>
     </ol>
   </nav>
 </section>
@@ -36,6 +38,7 @@
   <p><strong>Gli indicatori ufficiali</strong> vengono dal Piano degli indicatori, un allegato del rendiconto. Li calcola il comune stesso, con formule stabilite dalle norme e uguali per tutti, e li invia insieme al bilancio. Il sito li riporta come sono scritti, salvo i valori trattati come assenti descritti più sotto. Le definizioni ufficiali sono nella pagina del comune, alla voce «Che cosa misurano gli indicatori».</p>
   <p><strong>Le voci calcolate dal sito</strong> (spesa corrente e per investimenti, spesa per servizio, entrate, parte disponibile del risultato di amministrazione) partono dagli schemi di bilancio del rendiconto: il sito somma le righe, toglie le partite di giro e divide per i residenti. Sono calcoli di questo progetto, non del comune, e la pagina del comune dice come sono calcolati. Possono differire da numeri simili pubblicati altrove, per scelte diverse su cosa includere o su quale popolazione usare.</p>
   <p>La spesa per servizio segue le missioni e i programmi del bilancio, la classificazione per funzioni uguale per tutti i comuni: per esempio il programma «Rifiuti» sta nella missione «Sviluppo sostenibile e tutela del territorio e dell'ambiente».</p>
+  <p>Le entrate proprie sono i tributi e le entrate extratributarie (tariffe, canoni, multe, affitti) accertati dal comune. Non comprendono i fondi perequativi, come il fondo di solidarietà comunale: il bilancio li mette fra le entrate tributarie, ma sono somme distribuite dallo Stato o dalla regione per ridurre le differenze fra comuni.</p>
   <p>I numeri ufficiali sono messi prima di quelli calcolati, perché sono certificati dal comune.</p>
 </section>
 
@@ -45,6 +48,7 @@
   <p>Gli indicatori ufficiali per abitante (spesa per il personale, investimenti e debito per abitante) li calcola il comune sui residenti al 1° gennaio dell'anno di bilancio, o sull'ultimo dato che ha: per questo non coincidono con una divisione fatta qui.</p>
   <p>Si contano i residenti, non chi usa i servizi: in un comune turistico o con molti pendolari la spesa per abitante è più alta anche a parità di servizi, perché i servizi li usano anche persone che non vi risiedono.</p>
   <p>Alcuni comuni estinti prima del 2019 non hanno i residenti ISTAT degli anni in cui esistevano: le loro pagine mostrano gli importi totali, senza valori per abitante né confronti.</p>
+  <p>Nei comuni più piccoli i valori per abitante sono alti per una ragione di dimensione. Alcuni costi, come la sede, il segretario comunale e gli organi del comune, sono quasi gli stessi in un comune di 80 abitanti e in uno di 900: divisi per pochi residenti pesano molto di più. Nella fascia sotto i 1.000 abitanti, che va da circa 30 a 999 residenti, i comuni più piccoli stanno quasi sempre sopra la mediana, senza che questo dica qualcosa sulle loro scelte. La pagina di un comune sotto i 300 abitanti lo ricorda.</p>
 </section>
 
 <section id="gruppi">
@@ -56,7 +60,7 @@
     <li>Un gruppo con meno di 20 comuni che hanno il rendiconto e i residenti dell'anno si allarga: prima a tutte le regioni dello stesso tipo nella stessa fascia (ordinarie con ordinarie, speciali con speciali), poi a tutta Italia. Succede soprattutto per le città grandi.</li>
   </ul>
   <p>La pagina del comune dice sempre con quali comuni è confrontato e quanti di loro hanno il rendiconto di quell'anno. La fascia dipende dai residenti dell'anno: un comune vicino al confine fra due fasce può cambiare gruppo da un anno all'altro.</p>
-  <p>Limiti noti: il Trentino-Alto Adige è un gruppo unico, ma le province di Trento e di Bolzano hanno regole finanziarie diverse. I gruppi non tengono conto di turismo, montagna, pendolari o servizi che un comune svolge anche per i vicini, come un capoluogo: due comuni dello stesso gruppo possono avere bisogni molto diversi.</p>
+  <p>Limiti noti: il Trentino-Alto Adige è un gruppo unico, ma le province di Trento e di Bolzano hanno regole finanziarie diverse. I gruppi non tengono conto di turismo, montagna, pendolari o servizi che un comune svolge anche per i vicini, come un capoluogo: due comuni dello stesso gruppo possono avere bisogni molto diversi. I gruppi non sono quelli del portale OpenBDAP, che usa altre fasce di abitanti (per esempio fino a 1.000, da 10.001 a 50.000, da 50.001 a 100.000): un comune può avere comuni simili diversi qui e nel portale, e quindi una mediana diversa.</p>
 </section>
 
 <section id="mediana">
@@ -69,7 +73,7 @@
 
 <section id="assenti">
   <h2>Valori trattati come assenti</h2>
-  <p>Alcuni valori del Piano degli indicatori sono scritti in modo evidentemente sbagliato: campi non compilati salvati come zero, importi in un'unità sbagliata. Il sito non li corregge: li mostra come «n.d.» (non disponibile) e li lascia fuori da mediane e confronti. Le regole sono queste.</p>
+  <p>Alcuni valori del Piano degli indicatori sono scritti in modo evidentemente sbagliato: campi non compilati salvati come zero, importi in un'unità sbagliata. Il sito non li corregge: li mostra come «n.d.» (non disponibile), con il motivo, e li lascia fuori da mediane e confronti. Lo stesso «n.d.» vale per gli indicatori che il comune non ha compilato. Le regole sono queste.</p>
   <dl class="spiegazioni">
     <dt>Personale, investimenti e debito per abitante (indicatori 4.4, 7.4 e 10.4)</dt>
     <dd>Uno zero, quando l'indicatore gemello in percentuale (4.1, 7.1 e 10.3) è positivo, vuol dire che il comune non ha compilato la popolazione. Un valore negativo è sempre assente.</dd>
@@ -86,6 +90,12 @@
   <p>Ogni comune deve inviare il rendiconto alla banca dati della Ragioneria Generale dello Stato entro la primavera dell'anno dopo, salvo proroghe. «Non consegnato» vuol dire che, alla data dei dati, il rendiconto di quell'anno non risulta nella banca dati OpenBDAP. Non dice perché: un rendiconto può mancare perché approvato o inviato in ritardo, o per motivi che i dati non dicono. Spesso arriva più tardi e compare al successivo aggiornamento; i rendiconti dell'ultimo anno possono ancora arrivare.</p>
   <p>Questi comuni restano in tutte le tabelle del sito, perché anche l'assenza di un rendiconto è un'informazione. Per quell'anno non entrano nella mediana del loro gruppo. L'elenco è nella pagina dei <a href="{{ radice }}comuni-senza-rendiconto/">comuni senza rendiconto</a>.</p>
   <p>«Non esisteva» vale per un comune nato o estinto durante l'anno che non ha inviato il rendiconto di quell'anno: i conti di quel periodo stanno nel bilancio del comune da cui è nato o in cui è confluito.</p>
+  <p>La mediana di un gruppo descrive solo i comuni che hanno consegnato il rendiconto. Se in un gruppo ne mancano molti, la pagina lo dice («28 su 46»), e la mediana può cambiare quando arrivano.</p>
+</section>
+
+<section id="provvisori">
+  <h2>L'ultimo anno è provvisorio</h2>
+  <p>I rendiconti del {{ anni[-1] }} arrivano ancora: alla data dei dati ne mancano {{ consegne_ultimo.mancanti|numero }}. Quando arrivano cambiano le mediane dei gruppi e le posizioni dei comuni. Anche i rendiconti già consegnati possono essere corretti dal comune e ripubblicati dalla banca dati: per questo i numeri dell'ultimo anno possono differire di qualche euro per abitante da quelli che il portale OpenBDAP mostra in un altro momento.</p>
 </section>
 
 <section id="fusioni">
@@ -110,7 +120,7 @@
 </section>
 
 <section id="fonti">
-  <h2>Fonti e date dei dati</h2>
+  <h2>Fonti, licenze e date dei dati</h2>
   <dl class="spiegazioni">
     <dt><a href="https://openbdap.rgs.mef.gov.it/">OpenBDAP</a>, Ragioneria Generale dello Stato</dt>
     <dd>Rendiconti dei comuni: schemi di bilancio (spese, entrate, risultato di amministrazione, parametri di deficitarietà) e Piano degli indicatori. Data dei file, per anno di bilancio: {{ date_dei_dati|join("; ") }}.</dd>
@@ -124,5 +134,14 @@
     <dd>Media annua, per la frase sull'inflazione di questa pagina. Dati aggiornati al {{ date_fonti.eurostat_prezzi }}.</dd>
   </dl>
   <p>Ultima esportazione dei dati: {{ esportazione }}. Le date sono quelle dei file pubblicati dalle fonti: i dati si aggiornano quando una fonte pubblica una nuova versione.</p>
+  <p>OpenBDAP pubblica i dati con licenza Creative Commons Attribuzione (CC BY); ISTAT e IndicePA con licenza Creative Commons Attribuzione 4.0 (CC BY 4.0); Eurostat ne consente il riuso citando la fonte. I dati sono stati rielaborati: somme, divisioni per i residenti, valori esclusi secondo le regole di questa pagina.</p>
+  <p>Come citare: «Elaborazione di Trasparenza comuni su dati OpenBDAP (Ragioneria Generale dello Stato) e ISTAT, rendiconto {{ anni[-1] }}, dati del …», con l'anno, la data dei dati e l'indirizzo della pagina.</p>
+  <p>I numeri calcolati da questo sito si possono riusare con licenza <a href="https://creativecommons.org/licenses/by/4.0/deed.it">CC BY 4.0</a>, citando Trasparenza comuni e le fonti originali. Il codice è pubblicato con licenza AGPL-3.0.</p>
+</section>
+
+<section id="contatti">
+  <h2>Contatti e privacy</h2>
+  <p>Per segnalare un errore o contestare un numero: {{ contatto }}, oppure una <a href="{{ segnala }}">segnalazione pubblica su GitHub</a>. Il sito è curato da Alberto Grippaldi, a titolo personale.</p>
+  <p>Il sito non usa cookie né strumenti di statistica o di tracciamento, e non carica file da altri siti. Come per ogni sito, i server che lo ospitano (GitHub Pages e Cloudflare) registrano gli accessi.</p>
 </section>
 {% endblock %}

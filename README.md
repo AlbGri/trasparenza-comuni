@@ -118,4 +118,5 @@ trasparenza-comuni/
 
 ## Licenza
 
-[AGPL-3.0](LICENSE)
+Codice: [AGPL-3.0](LICENSE). Numeri calcolati dal sito: CC BY 4.0, citando Trasparenza comuni e
+le fonti originali. `sito/statico/plotly-basic-2.35.2.min.js` è Plotly.js, con licenza MIT.

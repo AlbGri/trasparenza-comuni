@@ -12,6 +12,8 @@ from datetime import date, datetime
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
+from datetime import timedelta
+
 import duckdb
 import pandas as pd
 
@@ -89,6 +91,8 @@ def _arrotonda(colonna: pd.Series, decimali: int | None) -> list:
 def voci_per_comune(righe: pd.DataFrame, anni: list[int]) -> dict[str, dict]:
     """Serie delle voci di ogni comune, da posizioni unite alla mediana del gruppo.
 
+    Un indicatore senza valore ha il motivo (`motivo_indicatori_assenti`), gli altri None.
+
     Raises:
         ValueError: se un comune ha due righe per la stessa voce e lo stesso anno.
     """
@@ -105,6 +109,7 @@ def voci_per_comune(righe: pd.DataFrame, anni: list[int]) -> dict[str, dict]:
     }
     indicatore = euro | {
         "valore": _arrotonda(righe["valore"], 2), "mediana": _arrotonda(righe["mediana"], 2),
+        "motivo": [None if pd.isna(m) else m for m in righe["motivo"]],
     }
     posto = {anno: i for i, anno in enumerate(anni)}
     voci = {}
@@ -116,7 +121,7 @@ def voci_per_comune(righe: pd.DataFrame, anni: list[int]) -> dict[str, dict]:
         suoi = voci.setdefault(cf, {})
         chiave = f"{misura}/{codice}"
         if chiave not in suoi:
-            campi = ["valore"] if misura == "indicatore" else ["importo", "procapite"]
+            campi = ["valore", "motivo"] if misura == "indicatore" else ["importo", "procapite"]
             campi += ["posizione", "mediana"]
             if misura in MISURE_CON_ANDAMENTO:
                 campi.append("scarto")
@@ -125,6 +130,39 @@ def voci_per_comune(righe: pd.DataFrame, anni: list[int]) -> dict[str, dict]:
         for campo, serie in suoi[chiave].items():
             serie[posto[anno]] = sorgente[campo][riga]
     return voci
+
+
+def indicatori_assenti(
+    con: duckdb.DuckDBPyConnection, cartella: Path, posizioni: pd.DataFrame,
+    gruppi: pd.DataFrame,
+) -> pd.DataFrame:
+    """Indicatori esportati senza valore per i comuni confrontati che hanno il piano.
+
+    Motivo: 'non compilato' se nel piano il valore e' vuoto o la riga manca, 'escluso' se c'e'
+    ma una regola dei confronti l'ha scartato. Chi non ha il piano dell'anno non ha righe.
+    """
+    tenuti = posizioni[posizioni["misura"] == "indicatore"]
+    confrontati = gruppi[(gruppi["stato"] == "consegnato") & gruppi["fascia"].notna()]
+    con.register("tenuti", tenuti[["cf", "anno", "codice"]])
+    con.register("confrontati", confrontati[["cf", "anno"]])
+    return con.execute(f"""
+        WITH piani AS (
+            SELECT cf, anno, gruppo || '.' || indicatore AS codice, count(valore) AS scritti
+            FROM read_parquet('{(cartella / "*.parquet").as_posix()}')
+            GROUP BY ALL
+        ),
+        attesi AS (
+            SELECT DISTINCT p.cf, p.anno, c.codice
+            FROM piani p JOIN confrontati USING (cf, anno),
+                (SELECT unnest({list(INDICATORI)}) AS codice) c
+        )
+        SELECT a.cf, a.anno::SMALLINT AS anno, 'indicatore' AS misura, a.codice,
+            CASE WHEN coalesce(p.scritti, 0) > 0 THEN 'escluso' ELSE 'non compilato' END
+                AS motivo
+        FROM attesi a
+        LEFT JOIN piani p USING (cf, anno, codice)
+        ANTI JOIN tenuti t ON t.cf = a.cf AND t.anno = a.anno AND t.codice = a.codice
+    """).df()
 
 
 def _parametri_per_comune(parametri: pd.DataFrame) -> tuple[dict, dict]:
@@ -190,9 +228,11 @@ def dizionario(codici: pd.DataFrame, voci: list[str]) -> dict:
             }
         elif misura == "entrate_proprie":
             voce = euro | {
-                "nome": "Entrate proprie (tributarie ed extratributarie)",
+                "nome": "Entrate proprie (tributarie ed extratributarie, senza i fondi "
+                "perequativi)",
                 "fonte": FONTE_ENTRATE, "misura": "accertamenti, competenza",
-                "metodo": f"accertamenti dei titoli 1 e 3, {PRO_CAPITE}",
+                "metodo": "accertamenti dei titoli 1 e 3, senza i fondi perequativi "
+                f"(tipologie 301 e 302 del titolo 1), {PRO_CAPITE}",
             }
         elif misura == "risultato_disponibile":
             voce = euro | {
@@ -225,6 +265,10 @@ def dizionario(codici: pd.DataFrame, voci: list[str]) -> dict:
             "importo": "euro, come nel rendiconto",
             "procapite": "euro per abitante, arrotondati all'euro",
             "valore": "valore dell'indicatore ufficiale, come nel rendiconto",
+            "motivo": "perche' manca il valore dell'indicatore: 'non compilato' (vuoto o "
+            "assente nel piano degli indicatori del comune) o 'escluso' (scartato da una "
+            "regola del metodo)",
+            "cessazione": "primo giorno in cui il comune non esiste piu' (ISO), null se attivo",
             "posizione": "percentuale degli altri comuni del gruppo con un valore piu' basso",
             "mediana": "mediana dei comuni del gruppo nello stesso anno",
             "scarto": "variazione sull'anno prima del valore pro capite del comune meno la "
@@ -303,6 +347,10 @@ def esporta(cartella: Path = PROCESSED, uscita: Path = EXPORT) -> int:
         SELECT * FROM read_parquet('{(cartella / "posizioni" / "*.parquet").as_posix()}')
         WHERE {VOCI_ESPORTATE}
     """).df()
+    posizioni = pd.concat([
+        posizioni,
+        indicatori_assenti(con, cartella / "indicatori_ufficiali", posizioni, gruppi),
+    ])
     parametri = pd.read_parquet(cartella / "parametri")
     anni = sorted(consegne["anno"].unique().tolist())
 
@@ -335,6 +383,9 @@ def esporta(cartella: Path = PROCESSED, uscita: Path = EXPORT) -> int:
             "id": ente.codice_istat, "nome": ente.nome, "provincia": ente.provincia,
             "regione": ente.regione, "codice_fiscale": ente.cf, "stato": ente.stato,
             "successore": istat.get(ente.successore),
+            # la data di cessazione di BDAP e' l'ultimo giorno; ISTAT conta dal giorno dopo
+            "cessazione": None if pd.isna(ente.data_cessazione)
+            else (ente.data_cessazione + timedelta(days=1)).date().isoformat(),
             "predecessori": predecessori.get(ente.cf, []), "anni": anni,
         }
         stati = consegne_cf[ente.cf].set_index("anno")["stato"].to_dict()

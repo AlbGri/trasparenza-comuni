@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Come sono fatti questi numeri - Trasparenza comuni</title>
+<meta name="description" content="Il metodo di Trasparenza comuni: impegni e pagamenti, comuni simili, mediana e posizione, indicatori ufficiali, valori assenti, rendiconti non consegnati, fusioni e fonti dei dati.">
+<link rel="canonical" href="https://trasparenza-comuni.albgri.com/metodo/">
+<link rel="stylesheet" href="../statico/stile.css">
+</head>
+<body>
+<header class="barra">
+  <div class="largo barra-dentro">
+    <a class="marchio" href="../">Trasparenza comuni</a>
+  </div>
+</header>
+<main class="largo">
+<section>
+  <h1>Come sono fatti questi numeri</h1>
+  <p>Questa pagina spiega da dove vengono i numeri del sito, come sono calcolati e come leggerli. Il sito mostra i rendiconti dei comuni italiani dal 2016 al 2025, presi dalla banca dati pubblica OpenBDAP della Ragioneria Generale dello Stato, insieme alla popolazione residente di ISTAT. Il codice che scarica i dati e fa i calcoli è <a href="https://github.com/AlbGri/trasparenza-comuni">pubblico</a>.</p>
+  <nav aria-label="Sezioni della pagina">
+    <ol>
+      <li><a href="#impegni">Impegni e accertamenti, pagamenti e incassi</a></li>
+      <li><a href="#ufficiali">Indicatori ufficiali e voci calcolate dal sito</a></li>
+      <li><a href="#abitanti">I valori per abitante</a></li>
+      <li><a href="#gruppi">I comuni simili</a></li>
+      <li><a href="#mediana">Mediana e posizione, non la media</a></li>
+      <li><a href="#assenti">Valori trattati come assenti</a></li>
+      <li><a href="#non-consegnato">Rendiconto non consegnato</a></li>
+      <li><a href="#provvisori">L'ultimo anno è provvisorio</a></li>
+      <li><a href="#fusioni">Comuni estinti e fusioni</a></li>
+      <li><a href="#limiti">Che cosa non si può concludere da questi numeri</a></li>
+      <li><a href="#fonti">Fonti, licenze e date dei dati</a></li>
+      <li><a href="#curatore">Chi cura il sito</a></li>
+      <li><a href="#contatti">Contatti e privacy</a></li>
+    </ol>
+  </nav>
+</section>
+
+<section id="impegni">
+  <h2>Impegni e accertamenti, pagamenti e incassi</h2>
+  <p>Il rendiconto è il bilancio consuntivo che ogni comune approva dopo la fine dell'anno. Le spese mostrate qui sono impegni di competenza: le somme che il comune si è obbligato a spendere nell'anno, per stipendi, contratti o servizi, anche se le pagherà più tardi. Le entrate sono accertamenti di competenza: le somme che il comune ha titolo a riscuotere nell'anno, anche se le incasserà più tardi o in parte non le incasserà.</p>
+  <p>Pagamenti e incassi sono un'altra cosa: i soldi che escono ed entrano davvero dalla tesoreria in un certo periodo, compresi quelli che riguardano impegni e accertamenti di anni precedenti. Li registra un'altra banca dati, SIOPE, che questo sito non usa ancora.</p>
+  <p>Le due misure non si sommano e non si confrontano. Una spesa impegnata a dicembre può essere pagata a marzo dell'anno dopo; un'opera pubblica si impegna in un anno e si paga in più anni. Una differenza fra impegni e pagamenti dello stesso anno non è di per sé un errore né un ritardo. Per questo ogni numero del sito dice se è un impegno, un accertamento o un saldo di fine anno.</p>
+  <p>Dalla spesa si tolgono le partite di giro (somme che il comune incassa e versa per conto di altri, come le ritenute sugli stipendi) e la restituzione delle anticipazioni di cassa (prestiti a breve del tesoriere, chiusi entro l'anno): gonfierebbero la spesa senza corrispondere a servizi. Restano invece gli interessi su quelle anticipazioni, che sono un costo vero.</p>
+</section>
+
+<section id="ufficiali">
+  <h2>Indicatori ufficiali e voci calcolate dal sito</h2>
+  <p>Nella pagina di un comune ci sono due tipi di numeri.</p>
+  <p><strong>Gli indicatori ufficiali</strong> vengono dal Piano degli indicatori, un allegato del rendiconto. Li calcola il comune stesso, con formule stabilite dalle norme e uguali per tutti, e li invia insieme al bilancio. Il sito li riporta come sono scritti, salvo i valori trattati come assenti descritti più sotto. Le definizioni ufficiali sono nella pagina del comune, alla voce «Che cosa misurano gli indicatori».</p>
+  <p><strong>Le voci calcolate dal sito</strong> (spesa corrente e per investimenti, spesa per servizio, entrate, parte disponibile del risultato di amministrazione) partono dagli schemi di bilancio del rendiconto: il sito somma le righe, toglie le partite di giro e divide per i residenti. Sono calcoli di questo progetto, non del comune, e la pagina del comune dice come sono calcolati. Possono differire da numeri simili pubblicati altrove, per scelte diverse su cosa includere o su quale popolazione usare.</p>
+  <p>La spesa per servizio segue le missioni e i programmi del bilancio, la classificazione per funzioni uguale per tutti i comuni: per esempio il programma «Rifiuti» sta nella missione «Sviluppo sostenibile e tutela del territorio e dell'ambiente».</p>
+  <p>Le entrate proprie sono i tributi e le entrate extratributarie (tariffe, canoni, multe, affitti) accertati dal comune. Non comprendono i fondi perequativi, come il fondo di solidarietà comunale: il bilancio li mette fra le entrate tributarie, ma sono somme distribuite dallo Stato o dalla regione per ridurre le differenze fra comuni.</p>
+  <p>I numeri ufficiali sono messi prima di quelli calcolati, perché sono i numeri del comune stesso, non elaborazioni di questo sito. Non sono però certificati da un ente esterno: il sito ne toglie alcuni scritti in modo evidentemente sbagliato, come spiegato più sotto.</p>
+</section>
+
+<section id="abitanti">
+  <h2>I valori per abitante</h2>
+  <p>Le voci calcolate dal sito sono divise per i residenti ISTAT al 1° gennaio dell'anno dopo quello del bilancio: per il rendiconto 2024, i residenti al 1° gennaio 2025, cioè la popolazione alla fine dell'anno a cui si riferisce il bilancio. Per un comune estinto durante l'anno valgono i residenti al 1° gennaio dello stesso anno, perché al 1° gennaio successivo il comune non c'è più.</p>
+  <p>Gli indicatori ufficiali per abitante (spesa per il personale, investimenti e debito per abitante) li calcola il comune sui residenti al 1° gennaio dell'anno di bilancio, o sull'ultimo dato che ha: per questo non coincidono con una divisione fatta qui.</p>
+  <p>Si contano i residenti, non chi usa i servizi: in un comune turistico o con molti pendolari la spesa per abitante è più alta anche a parità di servizi, perché i servizi li usano anche persone che non vi risiedono.</p>
+  <p>Alcuni comuni estinti prima del 2019 non hanno i residenti ISTAT degli anni in cui esistevano: le loro pagine mostrano gli importi totali, senza valori per abitante né confronti.</p>
+  <p>Nei comuni più piccoli i valori per abitante sono alti per una ragione di dimensione. Alcuni costi, come la sede, il segretario comunale e gli organi del comune, sono quasi gli stessi in un comune di 80 abitanti e in uno di 900: divisi per pochi residenti pesano molto di più. Nella fascia sotto i 1.000 abitanti, che va da circa 30 a 999 residenti, i comuni più piccoli stanno quasi sempre sopra la mediana, senza che questo dica qualcosa sulle loro scelte. La pagina di un comune sotto i 300 abitanti lo ricorda.</p>
+</section>
+
+<section id="gruppi">
+  <h2>I comuni simili</h2>
+  <p>Ogni comune è confrontato con i comuni simili per numero di abitanti e area geografica, nello stesso anno.</p>
+  <ul>
+    <li>Sei fasce di abitanti: sotto 1.000, 1.000-5.000, 5.000-20.000, 20.000-60.000, 60.000-250.000, oltre 250.000.</li>
+    <li>Per le regioni a statuto ordinario, quattro aree: Nord-ovest, Nord-est, Centro e Sud. Ogni regione a statuto speciale (Valle d'Aosta, Trentino-Alto Adige, Friuli-Venezia Giulia, Sicilia, Sardegna) fa gruppo a sé, perché ha regole proprie sulla finanza dei comuni.</li>
+    <li>Un gruppo con meno di 20 comuni che hanno il rendiconto e i residenti dell'anno si allarga: prima a tutte le regioni dello stesso tipo nella stessa fascia (ordinarie con ordinarie, speciali con speciali), poi a tutta Italia. Succede soprattutto per le città grandi.</li>
+  </ul>
+  <p>La pagina del comune dice sempre con quali comuni è confrontato, con il collegamento al loro elenco, e quanti di loro hanno il rendiconto di quell'anno. La fascia dipende dai residenti dell'anno: un comune vicino al confine fra due fasce può cambiare gruppo da un anno all'altro.</p>
+  <p>Limiti noti: il Trentino-Alto Adige è un gruppo unico, ma le province di Trento e di Bolzano hanno regole finanziarie diverse. Quando un gruppo si allarga alle regioni speciali, mette insieme regioni con finanze molto diverse (Sicilia e Sardegna con Valle d'Aosta, Trentino-Alto Adige e Friuli-Venezia Giulia): nei gruppi allargati la mediana va letta con più cautela. I gruppi non tengono conto di turismo, montagna, pendolari o servizi che un comune svolge anche per i vicini, come un capoluogo: due comuni dello stesso gruppo possono avere bisogni molto diversi. I gruppi non sono quelli del portale OpenBDAP, che usa altre fasce di abitanti (per esempio fino a 1.000, da 10.001 a 50.000, da 50.001 a 100.000): un comune può avere comuni simili diversi qui e nel portale, e quindi una mediana diversa.</p>
+</section>
+
+<section id="mediana">
+  <h2>Mediana e posizione, non la media</h2>
+  <p>Per ogni voce la pagina del comune mostra la mediana dei comuni simili e la posizione del comune fra loro.</p>
+  <p>La mediana è il valore di mezzo: metà dei comuni del gruppo ha un valore più basso, metà più alto. La media invece si sposta per pochi comuni con valori estremi: in un gruppo di piccoli comuni, uno solo con una grande opera in corso basta ad alzare la media degli investimenti per abitante, mentre la mediana quasi non cambia.</p>
+  <p>La posizione è la percentuale degli altri comuni del gruppo con un valore più basso: «sopra l'80% dei comuni simili» vuol dire che 80 comuni simili su 100 hanno un valore più basso. Lo 0% è il valore più basso del gruppo, il 100% il più alto. Una voce di spesa o di entrata che il comune non ha nell'anno conta come zero; un indicatore ufficiale assente resta fuori dal confronto.</p>
+  <p>Quando meno di 30 comuni del gruppo hanno un valore per la voce, una percentuale salterebbe a scatti grandi: la pagina allora conta i comuni, per esempio «sopra 7 dei 9 comuni simili». Un valore a zero non ha posizione: dire che è il più basso non aggiunge niente, e spesso il servizio lo svolge un altro ente (vedi i <a href="#limiti">limiti</a>).</p>
+  <p>La posizione dice dove sta un numero, non se è buono o cattivo. Una spesa più alta della mediana può voler dire più servizi, costi più alti, un territorio più difficile o un modo diverso di registrare le voci.</p>
+</section>
+
+<section id="assenti">
+  <h2>Valori trattati come assenti</h2>
+  <p>Alcuni valori del Piano degli indicatori sono scritti in modo evidentemente sbagliato: campi non compilati salvati come zero, importi in un'unità sbagliata. Il sito non li corregge: li mostra come «n.d.» (non disponibile), con il motivo, e li lascia fuori da mediane e confronti. Lo stesso «n.d.» vale per gli indicatori che il comune non ha compilato. Le regole sono queste.</p>
+  <dl class="spiegazioni">
+    <dt>Personale, investimenti e debito per abitante (indicatori 4.4, 7.4 e 10.4)</dt>
+    <dd>Uno zero, quando l'indicatore gemello in percentuale (4.1, 7.1 e 10.3) è positivo, vuol dire che il comune non ha compilato la popolazione. Un valore negativo è sempre assente.</dd>
+    <dt>Personale e investimenti per abitante (4.4 e 7.4), controllo della scala</dt>
+    <dd>Dalla percentuale gemella e dalla spesa del comune si ricava il valore atteso. Se il valore scritto è sotto la metà o oltre il doppio di quello atteso, l'unità è sbagliata, per esempio migliaia di euro scritte come euro. Il margine è largo perché il comune usa una popolazione e voci contabili un po' diverse da quelle del sito.</dd>
+    <dt>Debito per abitante (10.4), controllo della scala</dt>
+    <dd>Il debito di fine anno si confronta con quanto il comune restituisce di prestiti l'anno dopo: nessun comune rimborsa in un anno più di dieci volte il debito che ha. Un valore più basso è assente (di solito migliaia di euro scritte come euro). Per l'ultimo anno, che non ha ancora l'anno dopo, il confronto è con gli altri anni dello stesso comune: cento volte più basso è assente. È assente anche un valore oltre 5.000 euro che sia più di venti volte gli altri anni del comune, e ogni valore oltre 50.000 euro per abitante. La soglia dei 5.000 euro lascia il dato a un comune che passa davvero da un debito piccolo a un mutuo grosso.</dd>
+    <dt>Tempi di pagamento delle fatture (9.5)</dt>
+    <dd>Valgono solo i valori fra -60 e +365 giorni, diversi da zero. Lo zero esatto è quasi sempre un campo non compilato; sotto i -60 giorni il comune pagherebbe molto prima della scadenza, segno di un numero scritto in un'altra scala. Il prezzo di questa regola: un comune che paga davvero in media proprio alla scadenza risulta senza dato.</dd>
+  </dl>
+  <p>Altri errori possibili non sono controllati. Per esempio alcuni comuni scrivono una percentuale come frazione (0,26 invece di 26%), e il sito la riporta come è scritta.</p>
+</section>
+
+<section id="non-consegnato">
+  <h2>Rendiconto non consegnato</h2>
+  <p>Ogni comune deve inviare il rendiconto alla banca dati della Ragioneria Generale dello Stato entro la primavera dell'anno dopo, salvo proroghe. «Non consegnato» vuol dire che, alla data dei dati, il rendiconto di quell'anno non risulta nella banca dati OpenBDAP. Non dice perché: un rendiconto può mancare perché approvato o inviato in ritardo, o per motivi che i dati non dicono. Spesso arriva più tardi e compare al successivo aggiornamento; i rendiconti dell'ultimo anno possono ancora arrivare.</p>
+  <p>Questi comuni restano in tutte le tabelle del sito, perché anche l'assenza di un rendiconto è un'informazione. Per quell'anno non entrano nella mediana del loro gruppo. L'elenco è nella pagina dei <a href="../comuni-senza-rendiconto/">comuni senza rendiconto</a>.</p>
+  <p>«Non esisteva» vale per un comune nato o estinto durante l'anno che non ha inviato il rendiconto di quell'anno: i conti di quel periodo stanno nel bilancio del comune da cui è nato o in cui è confluito.</p>
+  <p>La mediana di un gruppo descrive solo i comuni che hanno consegnato il rendiconto. Se in un gruppo ne mancano molti, la pagina lo dice («28 su 46»), e la mediana può cambiare quando arrivano.</p>
+</section>
+
+<section id="provvisori">
+  <h2>L'ultimo anno è provvisorio</h2>
+  <p>I rendiconti del 2025 arrivano ancora: alla data dei dati ne mancano 250. Quando arrivano cambiano le mediane dei gruppi e le posizioni dei comuni. Anche i rendiconti già consegnati possono essere corretti dal comune e ripubblicati dalla banca dati: per questo i numeri dell'ultimo anno possono differire di qualche euro per abitante da quelli che il portale OpenBDAP mostra in un altro momento.</p>
+</section>
+
+<section id="fusioni">
+  <h2>Comuni estinti e fusioni</h2>
+  <p>Dal 2016 diversi comuni si sono fusi in un comune nuovo o sono stati incorporati da un comune vicino. Il sito tiene una pagina per ogni comune, anche estinto, con i rendiconti degli anni in cui esisteva. La pagina di un comune estinto dice in quale comune è confluito, e quella del comune nuovo da quali comuni è nato.</p>
+  <p>I numeri dei comuni fusi non si sommano a quelli del comune nuovo: un comune nato da una fusione ha i suoi dati solo dagli anni in cui esiste. Quando un comune ne incorpora un altro, invece, la sua serie continua ma da quell'anno comprende anche il territorio e i residenti dell'altro: un salto negli importi può venire da lì.</p>
+  <p>Ogni comune è seguito nel tempo con il suo codice fiscale. Il codice ISTAT si ricava dal codice fiscale attraverso l'anagrafe degli enti pubblici (IndicePA) e l'elenco dei comuni di ISTAT; un comune estinto conserva il codice ISTAT che aveva. I pochi casi che i dati non risolvono da soli sono corretti a mano, in una tabella pubblica nel codice del sito.</p>
+</section>
+
+<section id="limiti">
+  <h2>Che cosa non si può concludere da questi numeri</h2>
+  <ul>
+    <li>Se un comune spende bene o male. Una spesa più alta può dipendere da più servizi, dal territorio, dal turismo, dai prezzi locali o da come il comune registra le voci; una più bassa da servizi che mancano o che paga qualcun altro.</li>
+    <li>La qualità dei servizi: il bilancio dice quanto si spende, non che cosa ne ricevono i cittadini.</li>
+    <li>Quanto costa un servizio quando lo gestisce un altro ente. Un servizio gestito insieme ad altri comuni, per esempio attraverso un'unione, compare nel bilancio del comune solo per la quota che il comune trasferisce; una tariffa pagata dai cittadini direttamente al gestore non passa dal bilancio del comune.</li>
+    <li>Un andamento da un anno solo. Un'opera pubblica, un contributo straordinario o le misure di emergenza del 2020 e del 2021 possono spostare molto un anno: meglio guardare più anni.</li>
+    <li>Una crescita reale della spesa. Gli importi sono in euro dell'anno, non corretti per l'inflazione: fra il 2016 e il 2025 i prezzi al consumo sono saliti di circa il 24% (indice IPCA).</li>
+    <li>Che i conti siano esatti. Il sito riporta quello che il comune ha inviato alla banca dati e controlla che i totali tornino con quelli della fonte, ma non verifica i bilanci: un errore del comune passa nel sito.</li>
+    <li>Un giudizio di dissesto. I parametri di deficitarietà sono dichiarati dal comune nel rendiconto; «strutturalmente deficitario» è la conclusione che il comune stesso trae da quei parametri e non vuol dire dissesto finanziario.</li>
+  </ul>
+  <p>Se trovi un numero che non torna con il rendiconto del comune, <a href="https://github.com/AlbGri/trasparenza-comuni/issues/new">segnalalo</a>.</p>
+</section>
+
+<section id="fonti">
+  <h2>Fonti, licenze e date dei dati</h2>
+  <dl class="spiegazioni">
+    <dt><a href="https://openbdap.rgs.mef.gov.it/">OpenBDAP</a>, Ragioneria Generale dello Stato</dt>
+    <dd>Rendiconti dei comuni: schemi di bilancio (spese, entrate, risultato di amministrazione, parametri di deficitarietà) e Piano degli indicatori. Data dei file, per anno di bilancio: 2016-2021: 8 maggio 2026; 2022-2025: 3 novembre 2026.</dd>
+    <dt><a href="https://demo.istat.it/">ISTAT</a>, popolazione residente</dt>
+    <dd>Residenti di ogni comune al 1° gennaio. Dati aggiornati al 30 marzo 2026.</dd>
+    <dt><a href="https://www.istat.it/">ISTAT</a>, elenco dei comuni e variazioni amministrative</dt>
+    <dd>Codici, nomi, province e regioni dei comuni, fusioni ed estinzioni. Dati aggiornati al 9 gennaio 2025.</dd>
+    <dt><a href="https://indicepa.gov.it/">IndicePA</a>, indice dei domicili digitali della pubblica amministrazione</dt>
+    <dd>Anagrafe degli enti, per collegare codice fiscale e codice ISTAT. Dati aggiornati al 14 novembre 2026.</dd>
+    <dt><a href="https://ec.europa.eu/eurostat/">Eurostat</a>, indice dei prezzi al consumo armonizzato (IPCA) dell'Italia</dt>
+    <dd>Media annua, per la frase sull'inflazione di questa pagina. Dati aggiornati al 6 febbraio 2026.</dd>
+  </dl>
+  <p>Ultima esportazione dei dati: 15 novembre 2026. Le date sono quelle dei file pubblicati dalle fonti: i dati si aggiornano quando una fonte pubblica una nuova versione.</p>
+  <p>OpenBDAP pubblica i dati con licenza Creative Commons Attribuzione (CC BY); ISTAT e IndicePA con licenza Creative Commons Attribuzione 4.0 (CC BY 4.0); Eurostat ne consente il riuso citando la fonte. I dati sono stati rielaborati: somme, divisioni per i residenti, valori esclusi secondo le regole di questa pagina.</p>
+  <p>Come citare: «Elaborazione di Trasparenza comuni su dati OpenBDAP (Ragioneria Generale dello Stato) e ISTAT, rendiconto 2025, dati del …», con l'anno, la data dei dati e l'indirizzo della pagina.</p>
+  <p>I numeri calcolati da questo sito si possono riusare con licenza <a href="https://creativecommons.org/licenses/by/4.0/deed.it">CC BY 4.0</a>, citando Trasparenza comuni e le fonti originali. Il codice è pubblicato con licenza AGPL-3.0.</p>
+</section>
+
+<section id="curatore">
+  <h2>Chi cura il sito</h2>
+  <p>Trasparenza comuni è curato da Alberto Grippaldi, a titolo personale. Il progetto è indipendente: non è collegato alla Ragioneria Generale dello Stato, all'ISTAT né ad altri enti pubblici. Per segnalare un errore o fare una domanda valgono i contatti qui sotto.</p>
+</section>
+
+<section id="contatti">
+  <h2>Contatti e privacy</h2>
+  <p>Per segnalare un errore o contestare un numero: <a href="mailto:trasparenza-comuni@albgri.com">trasparenza-comuni@albgri.com</a>, oppure una <a href="https://github.com/AlbGri/trasparenza-comuni/issues/new">segnalazione pubblica su GitHub</a>.</p>
+  <p>Il sito non usa strumenti di statistica o di tracciamento e non carica file da altri siti. Cloudflare, il servizio che sta davanti al sito, controlla in ogni pagina se chi la apre usa un browser o un programma automatico e salva l'esito in un cookie tecnico (<code>cf_clearance</code>), che non serve a profilare chi visita. Come per ogni sito, i server che lo ospitano (GitHub Pages e Cloudflare) registrano gli accessi.</p>
+</section>
+</main>
+<footer class="piede">
+  <div class="largo">
+    <p>Trasparenza comuni: osservatorio civico sui bilanci dei comuni italiani, fatto con i dati
+      pubblici di OpenBDAP (Ragioneria Generale dello Stato) e ISTAT. Progetto indipendente, non
+      collegato alla Ragioneria Generale dello Stato né ad altri enti pubblici.</p>
+    <p>Segnala un errore: per email a <a href="mailto:trasparenza-comuni@albgri.com">trasparenza-comuni@albgri.com</a> o <a href="https://github.com/AlbGri/trasparenza-comuni/issues/new">su GitHub</a>.</p>
+    <p><a href="../metodo/">Come sono fatti questi numeri</a> ·
+      <a href="../metodo/#curatore">Chi cura il sito</a> ·
+      <a href="https://github.com/AlbGri/trasparenza-comuni">Codice sorgente</a></p>
+    <p class="nota">Nessun tracciamento. Cloudflare salva un solo cookie tecnico, per distinguere i browser dai programmi automatici.</p>
+  </div>
+</footer>
+</body>
+</html>

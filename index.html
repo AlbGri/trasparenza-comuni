@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I bilanci dei comuni italiani - Trasparenza comuni</title>
+<meta name="description" content="Quanto spende ogni comune italiano, per che cosa, e come si colloca fra i comuni simili: rendiconti dal 2016 al 2025, indicatori ufficiali e confronti.">
+<link rel="canonical" href="https://trasparenza-comuni.albgri.com/">
+<link rel="stylesheet" href="statico/stile.css">
+</head>
+<body>
+<header class="barra">
+  <div class="largo barra-dentro">
+    <a class="marchio" href="">Trasparenza comuni</a>
+  </div>
+</header>
+<main class="largo">
+<section class="apertura">
+  <h1>I bilanci dei comuni italiani</h1>
+  <p>Quanto spende un comune, per che cosa, e come si colloca fra i comuni simili. Rendiconti dal 2016 al 2025 di 7.893 comuni attivi, dalla banca dati pubblica della Ragioneria Generale dello Stato.</p>
+  <form class="ricerca" role="search" autocomplete="off">
+    <label for="cerca">Cerca un comune</label>
+    <input id="cerca" type="search" placeholder="Nome del comune, es. Bologna" enterkeyhint="go"
+      spellcheck="false" autocapitalize="off" role="combobox" aria-autocomplete="list"
+      aria-expanded="false" aria-controls="risultati">
+    <ul id="risultati" class="risultati" role="listbox" aria-label="Comuni trovati" hidden></ul>
+    <p id="esito" class="nota" aria-live="polite"></p>
+    <noscript><p class="nota">La ricerca ha bisogno di JavaScript, che in questo browser è disattivato.</p></noscript>
+  </form>
+</section>
+
+<section>
+  <h2>Che cosa trovi nella pagina di un comune</h2>
+  <ul>
+    <li>Gli indicatori ufficiali del rendiconto, calcolati dal comune e allegati al suo rendiconto.</li>
+    <li>La spesa corrente per servizio (scuola, rifiuti, polizia locale…) e le entrate, per abitante.</li>
+    <li>Il confronto con la mediana dei comuni simili per numero di abitanti e area geografica.</li>
+    <li>L'andamento dal 2016 e i parametri di deficitarietà dichiarati dal comune.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Da sapere prima di leggere i numeri</h2>
+  <p>Le spese sono impegni: le somme che il comune si è obbligato a spendere nell'anno, non i pagamenti effettivi. Il confronto con i comuni simili dice una posizione, non un giudizio: una spesa più alta può dipendere da servizi in più, dal territorio o da come il comune registra le voci.</p>
+  <p><a href="metodo/">Come sono fatti questi numeri</a></p>
+</section>
+
+<section>
+  <h2>Rendiconti consegnati</h2>
+  <p>Rendiconto 2025: 7.646 comuni presenti nella banca dati, 250 assenti al 3 novembre 2026.</p>
+  <p><a href="comuni-senza-rendiconto/">Comuni senza rendiconto</a></p>
+</section>
+</main>
+<footer class="piede">
+  <div class="largo">
+    <p>Trasparenza comuni: osservatorio civico sui bilanci dei comuni italiani, fatto con i dati
+      pubblici di OpenBDAP (Ragioneria Generale dello Stato) e ISTAT. Progetto indipendente, non
+      collegato alla Ragioneria Generale dello Stato né ad altri enti pubblici.</p>
+    <p>Segnala un errore: per email a <a href="mailto:trasparenza-comuni@albgri.com">trasparenza-comuni@albgri.com</a> o <a href="https://github.com/AlbGri/trasparenza-comuni/issues/new">su GitHub</a>.</p>
+    <p><a href="metodo/">Come sono fatti questi numeri</a> ·
+      <a href="metodo/#curatore">Chi cura il sito</a> ·
+      <a href="https://github.com/AlbGri/trasparenza-comuni">Codice sorgente</a></p>
+    <p class="nota">Nessun tracciamento. Cloudflare salva un solo cookie tecnico, per distinguere i browser dai programmi automatici.</p>
+  </div>
+</footer>
+<script src="statico/cerca.js" defer></script>
+</body>
+</html>

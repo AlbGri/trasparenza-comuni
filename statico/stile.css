@@ -1,0 +1,79 @@
+/* Regole di Trasparenza comuni, caricate dopo stile-comune.css: solo cio' che il foglio comune
+   non ha. Colori, caratteri e misure vengono dalle sue variabili. */
+
+h3 small, th small { color: var(--muted); font-weight: 400; }
+.sopratitolo { margin: 0 0 2px; color: var(--muted); }
+.nota, .data-dati { font-size: .88rem; color: var(--muted); }
+.avviso { margin: 0 0 8px; }
+
+/* dati dell'ente: celle su superficie, come le schede */
+.dati-ente { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 8px; margin: 10px 0 0; }
+.dati-ente div { padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.dati-ente dt { font-size: .88rem; color: var(--muted); }
+.dati-ente dd { margin: 0; font-weight: 700; }
+
+/* rendiconti per anno: "non consegnato" e' un dato, non un errore; niente colore di pericolo */
+.consegne { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; padding: 0; }
+.consegne li { padding: 3px 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; font-size: .88rem; }
+.consegne span { margin-right: 4px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.consegne .non-consegnato { border-color: var(--ink); font-weight: 700; }
+.consegne .non-esisteva { color: var(--muted); background: transparent; border-style: dashed; }
+
+/* misure principali: schede con il numero e la posizione fra i comuni simili */
+.misure { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 8px; }
+.misura h3 { font: 700 1.08rem/1.2 var(--serif); margin: 0; }
+.misura .valore { margin: 2px 0; font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.misura .valore small { font-size: .88rem; font-weight: 400; color: var(--muted); }
+.misura details.piega { margin-top: 8px; font-size: .88rem; }
+.confronto { margin: 2px 0; font-size: .88rem; color: var(--muted); }
+/* binario neutro, tacca della mediana al centro, punto del colore del dato */
+.scala { position: relative; height: 8px; margin: 12px 0 6px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; }
+.segno-mediana { position: absolute; left: 50%; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--muted); }
+.segno { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--dato); border: 2px solid var(--surface);
+  transform: translate(-50%, -50%); }
+.scala-legenda { display: flex; justify-content: space-between; font-size: .85rem; color: var(--muted); }
+.spiegazioni dt { margin-top: 8px; font-weight: 700; }
+.spiegazioni dd { margin: 0; }
+
+/* tabelle: misure proprie di questo sito */
+.scorre { overflow-x: auto; margin: 0 0 10px; }
+.tabella { font-size: .92rem; }
+.tabella td { white-space: nowrap; }
+.tabella th[scope="row"] { font-weight: 400; }
+.tabella:not(.mancanti) th[scope="row"] { min-width: 11rem; }
+.tabella tr.mediana :is(th, td) { color: var(--muted); font-size: .88rem; }
+.tabella tr.totale :is(th, td) { font-weight: 700; }
+.tabella td.motivo { text-align: left; white-space: normal; color: var(--muted); }
+table.parametri td { text-align: center; }
+/* larghezze fisse: le tabelle delle regioni, una sotto l'altra, restano allineate */
+table.mancanti { table-layout: fixed; }
+table.mancanti :is(th, td) { white-space: normal; text-align: left; min-width: 0; }
+table.mancanti :is(th, td):nth-child(1) { width: 34%; }
+table.mancanti :is(th, td):nth-child(2) { width: 24%; }
+table.mancanti :is(th, td):nth-child(3) { width: 15%; text-align: right; white-space: nowrap; }
+table.mancanti :is(th, td):nth-child(4) { width: 27%; }
+
+/* andamento: menu della voce e grafico Plotly dentro una scheda */
+.scelta { margin: 0 0 6px; }
+.scelta .campo { width: auto; max-width: 100%; }
+.andamento { margin-bottom: 10px; }
+.andamento-grafico.pronto { min-height: 22rem; }
+
+.fonti li { margin-bottom: 4px; font-size: .92rem; }
+.usare { margin-top: 16px; }
+
+/* ricerca del comune */
+.ricerca { max-width: 36rem; margin: 12px 0 0; }
+.risultati { list-style: none; margin: 4px 0 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.risultati li + li { border-top: 1px solid var(--line); }
+.risultati a { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-height: 44px; padding: 10px; color: inherit; text-decoration: none; }
+.risultati span { font-size: .88rem; color: var(--muted); }
+.risultati a:hover, .risultati [aria-selected="true"] a { background: var(--surface-2); }
+
+@media (max-width: 760px) {
+  .tabella:not(.mancanti) th[scope="row"] { min-width: 7rem; }
+  table.mancanti :is(th, td):nth-child(1) { width: 32%; overflow-wrap: anywhere; }
+  table.mancanti :is(th, td):nth-child(2) { width: 22%; }
+  table.mancanti :is(th, td):nth-child(3) { width: 20%; }
+  table.mancanti :is(th, td):nth-child(4) { width: 26%; }
+}

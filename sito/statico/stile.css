@@ -1,14 +1,10 @@
 /* Regole di Trasparenza comuni, caricate dopo stile-comune.css: solo cio' che il foglio comune
    non ha. Colori, caratteri e misure vengono dalle sue variabili. */
 
-/* titoli di sezione fuori da .documento: gli stessi valori dei testi lunghi */
-main > section > h2 { font: 700 1.35rem/1.2 var(--serif); margin: 22px 0 6px; }
-main > section > h3 { font: 700 1.1rem/1.25 var(--serif); margin: 16px 0 4px; }
 h3 small, th small { color: var(--muted); font-weight: 400; }
 .sopratitolo { margin: 0 0 2px; color: var(--muted); }
 .nota, .data-dati { font-size: .88rem; color: var(--muted); }
 .avviso { margin: 0 0 8px; }
-.solo-telefono { display: none; }
 
 /* dati dell'ente: celle su superficie, come le schede */
 .dati-ente { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 8px; margin: 10px 0 0; }
@@ -39,16 +35,12 @@ h3 small, th small { color: var(--muted); font-weight: 400; }
 .spiegazioni dt { margin-top: 8px; font-weight: 700; }
 .spiegazioni dd { margin: 0; }
 
-/* tabelle: il foglio comune non mette spazio fra le colonne, e due numeri vicini si toccherebbero */
+/* tabelle: misure proprie di questo sito */
 .scorre { overflow-x: auto; margin: 0 0 10px; }
 .tabella { font-size: .92rem; }
-.tabella :is(th, td) + :is(th, td) { padding-left: 14px; }
 .tabella td { white-space: nowrap; }
-.tabella thead th { font-size: .88rem; color: var(--muted); vertical-align: bottom; border-bottom-color: var(--muted); }
 .tabella th[scope="row"] { font-weight: 400; }
 .tabella:not(.mancanti) th[scope="row"] { min-width: 11rem; }
-/* nomi nelle tabelle lunghe: link del colore del testo, il giallo su centinaia di righe sarebbe rumore */
-.tabella a { color: inherit; text-underline-offset: 2px; }
 .tabella tr.mediana :is(th, td) { color: var(--muted); font-size: .88rem; }
 .tabella tr.totale :is(th, td) { font-weight: 700; }
 .tabella td.motivo { text-align: left; white-space: normal; color: var(--muted); }
@@ -79,9 +71,7 @@ table.mancanti :is(th, td):nth-child(4) { width: 27%; }
 .risultati a:hover, .risultati [aria-selected="true"] a { background: var(--surface-2); }
 
 @media (max-width: 760px) {
-  .solo-telefono { display: inline; }
   .tabella:not(.mancanti) th[scope="row"] { min-width: 7rem; }
-  .tabella :is(th, td) + :is(th, td) { padding-left: 8px; }
   table.mancanti :is(th, td):nth-child(1) { width: 32%; overflow-wrap: anywhere; }
   table.mancanti :is(th, td):nth-child(2) { width: 22%; }
   table.mancanti :is(th, td):nth-child(3) { width: 20%; }

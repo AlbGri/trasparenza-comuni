@@ -3,7 +3,7 @@
 {% for regione, righe in regioni.items() %}
 <h3>{{ regione }} <small>({{ righe|length }})</small></h3>
 <div class="scorre">
-<table class="mancanti">
+<table class="tabella mancanti">
   <thead><tr><th scope="col">Comune</th><th scope="col">Provincia</th><th scope="col">Residenti</th><th scope="col">{{ colonna_anni }}</th></tr></thead>
   <tbody>
   {% for r in righe %}
@@ -19,6 +19,8 @@
 {% block titolo %}Comuni senza rendiconto{% endblock %}
 {% block descrizione %}I comuni italiani il cui rendiconto non risulta nella banca dati OpenBDAP, anno per anno dal {{ anni[0] }} al {{ anni[-1] }}.{% endblock %}
 
+{% block briciole %}<a href="{{ radice }}">Home</a> › Comuni senza rendiconto{% endblock %}
+
 {% block contenuto %}
 <section>
   <h1>Comuni senza rendiconto</h1>
@@ -26,9 +28,9 @@
 </section>
 
 <section>
-  <h2>Anno per anno</h2>
+  <h2 id="anni">Anno per anno</h2>
   <div class="scorre">
-  <table>
+  <table class="tabella">
     <thead><tr><th scope="col">Rendiconto</th><th scope="col">Comuni tenuti a consegnarlo</th><th scope="col">Consegnati</th><th scope="col">Non consegnati</th><th scope="col">Data dei dati</th></tr></thead>
     <tbody>
     {% for a in conteggi %}
@@ -42,13 +44,13 @@
 
 {% set u = conteggi[-1] %}
 <section>
-  <h2>Rendiconto {{ u.anno }} non presente: {{ u.mancanti|numero }} comuni</h2>
+  <h2 id="ultimo" data-mappa="Senza il rendiconto {{ u.anno }}">Rendiconto {{ u.anno }} non presente: {{ u.mancanti|numero }} comuni</h2>
   <p class="data-dati">Dati OpenBDAP {{ u.data|articolata("del") }}. Residenti: ultimo dato ISTAT disponibile.</p>
   {{ elenco(ultimo, "Altri anni mancanti") }}
 </section>
 
 <section>
-  <h2>Rendiconti mancanti dal {{ anni[0] }} al {{ anni[-2] }}</h2>
+  <h2 id="prima" data-mappa="Mancanti negli anni prima">Rendiconti mancanti dal {{ anni[0] }} al {{ anni[-2] }}</h2>
   <p>Gli altri comuni a cui manca il rendiconto di almeno un anno fra il {{ anni[0] }} e il {{ anni[-2] }}.</p>
   {{ elenco(prima, "Anni mancanti") }}
 </section>

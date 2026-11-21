@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-21
+
+- Nuovo aspetto, con lo stile comune dei siti di AlbGri: mappa del sito a sinistra (sul telefono
+  dal pulsante "Mappa"), con le sezioni della pagina aperta; briciole in alto; caratteri
+  Alegreya e Atkinson Hyperlegible Next, serviti dal sito.
+- Tema scuro, che segue il sistema finché non si sceglie con il pulsante in alto; anche il
+  grafico dell'andamento cambia colori.
+- "Dati aggiornati al" nella barra in alto.
+- Pagina iniziale più breve: ricerca e riquadri verso i comuni senza rendiconto e il metodo.
+- Pagina del comune: i dati in tabella sotto il grafico si aprono con "Dati in tabella".
+- Piede di due righe, con il contatto, chi cura il sito e l'indipendenza dalla Ragioneria
+  Generale dello Stato.
+
 ## 2026-11-15
 
 - Sito pubblicato su https://trasparenza-comuni.albgri.com/ (indirizzo di riserva

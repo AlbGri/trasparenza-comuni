@@ -1,113 +1,87 @@
-:root {
-  --inchiostro: #1c2530;
-  --tenue: #5a6472;
-  --linea: #d8dde3;
-  --fondo: #fbfaf7;
-  --carta: #ffffff;
-  --accento: #1d5c87;
-  --accento-chiaro: #e3eef6;
-  --mancante: #a23b2a;
-  color-scheme: light;
-}
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  background: var(--fondo);
-  color: var(--inchiostro);
-  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-}
-a { color: var(--accento); }
-.largo { max-width: 64rem; margin: 0 auto; padding-inline: 1rem; }
+/* Regole di Trasparenza comuni, caricate dopo stile-comune.css: solo cio' che il foglio comune
+   non ha. Colori, caratteri e misure vengono dalle sue variabili. */
 
-.barra { background: var(--inchiostro); color: #fff; }
-.barra-dentro { display: flex; justify-content: space-between; align-items: center; padding-block: .6rem; }
-.marchio { color: #fff; font-weight: 700; text-decoration: none; letter-spacing: .01em; }
+/* titoli di sezione fuori da .documento: gli stessi valori dei testi lunghi */
+main > section > h2 { font: 700 1.35rem/1.2 var(--serif); margin: 22px 0 6px; }
+main > section > h3 { font: 700 1.1rem/1.25 var(--serif); margin: 16px 0 4px; }
+h3 small, th small { color: var(--muted); font-weight: 400; }
+.sopratitolo { margin: 0 0 2px; color: var(--muted); }
+.nota, .data-dati { font-size: .88rem; color: var(--muted); }
+.avviso { margin: 0 0 8px; }
+.solo-telefono { display: none; }
 
-main section { margin-block: 2.5rem; }
-h1 { font-size: clamp(1.7rem, 5vw, 2.4rem); line-height: 1.15; margin: .2rem 0 .8rem; }
-h2 { font-size: 1.35rem; margin: 0 0 .5rem; padding-top: 1.2rem; border-top: 1px solid var(--linea); }
-h3 { font-size: 1rem; margin: 1.5rem 0 .4rem; }
-.sopratitolo { color: var(--tenue); margin: 1.5rem 0 0; }
-.avviso { background: #fff4d6; border-left: 4px solid #d9a400; padding: .6rem .8rem; }
-.nota { color: var(--tenue); font-size: .92rem; }
+/* dati dell'ente: celle su superficie, come le schede */
+.dati-ente { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 8px; margin: 10px 0 0; }
+.dati-ente div { padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.dati-ente dt { font-size: .88rem; color: var(--muted); }
+.dati-ente dd { margin: 0; font-weight: 700; }
 
-.dati-ente { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .8rem; margin: 1.2rem 0 0; }
-.dati-ente div { background: var(--carta); border: 1px solid var(--linea); border-radius: 6px; padding: .6rem .8rem; }
-.dati-ente dt { color: var(--tenue); font-size: .85rem; }
-.dati-ente dd { margin: .1rem 0 0; font-weight: 600; }
+/* rendiconti per anno: "non consegnato" e' un dato, non un errore; niente colore di pericolo */
+.consegne { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; padding: 0; }
+.consegne li { padding: 3px 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; font-size: .88rem; }
+.consegne span { margin-right: 4px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.consegne .non-consegnato { border-color: var(--ink); font-weight: 700; }
+.consegne .non-esisteva { color: var(--muted); background: transparent; border-style: dashed; }
 
-.consegne { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem; }
-.consegne li {
-  border: 1px solid var(--linea); border-radius: 4px; padding: .25rem .55rem; font-size: .88rem;
-  background: var(--carta);
-}
-.consegne span { font-weight: 700; margin-right: .2rem; }
-.consegne .non-consegnato { border-color: var(--mancante); color: var(--mancante); }
-.consegne .non-esisteva { color: var(--tenue); background: transparent; border-style: dashed; }
+/* misure principali: schede con il numero e la posizione fra i comuni simili */
+.misure { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 8px; }
+.misura h3 { font: 700 1.08rem/1.2 var(--serif); margin: 0; }
+.misura .valore { margin: 2px 0; font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.misura .valore small { font-size: .88rem; font-weight: 400; color: var(--muted); }
+.misura details.piega { margin-top: 8px; font-size: .88rem; }
+.confronto { margin: 2px 0; font-size: .88rem; color: var(--muted); }
+/* binario neutro, tacca della mediana al centro, punto del colore del dato */
+.scala { position: relative; height: 8px; margin: 12px 0 6px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; }
+.segno-mediana { position: absolute; left: 50%; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--muted); }
+.segno { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--dato); border: 2px solid var(--surface);
+  transform: translate(-50%, -50%); }
+.scala-legenda { display: flex; justify-content: space-between; font-size: .85rem; color: var(--muted); }
+.spiegazioni dt { margin-top: 8px; font-weight: 700; }
+.spiegazioni dd { margin: 0; }
 
-.griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 1rem; }
-.misura { background: var(--carta); border: 1px solid var(--linea); border-radius: 6px; padding: .9rem 1rem; }
-.misura h3 { margin: 0; font-size: .95rem; font-weight: 600; }
-.valore { font-size: 1.6rem; font-weight: 700; margin: .3rem 0; }
-.valore small { font-size: .85rem; font-weight: 400; color: var(--tenue); }
-.confronto { margin: .2rem 0; font-size: .9rem; color: var(--tenue); }
-.scala { position: relative; height: .5rem; margin: .6rem 0 .3rem; border-radius: 3px; background: linear-gradient(90deg, var(--accento-chiaro), #b9d2e6); }
-.segno-mediana { position: absolute; left: 50%; top: -.2rem; bottom: -.2rem; width: 2px; background: var(--tenue); }
-.segno { position: absolute; top: 50%; width: .9rem; height: .9rem; border-radius: 50%; background: var(--accento); border: 2px solid #fff; transform: translate(-50%, -50%); }
-.scala-legenda { display: flex; justify-content: space-between; font-size: .72rem; color: var(--tenue); margin-top: -.1rem; }
-.data-dati { color: var(--tenue); font-size: .88rem; margin: -.2rem 0 .6rem; }
-.spiegazioni dt { font-weight: 600; color: var(--inchiostro); margin-top: .6rem; }
-.spiegazioni dd { margin: .1rem 0 0; }
-td small { color: var(--tenue); }
-details { margin-top: .6rem; font-size: .88rem; color: var(--tenue); }
-summary { cursor: pointer; color: var(--accento); }
-
-.scorre { overflow-x: auto; }
-table { border-collapse: collapse; width: 100%; background: var(--carta); font-size: .92rem; }
-th, td { padding: .45rem .6rem; border-bottom: 1px solid var(--linea); text-align: right; white-space: nowrap; }
-th[scope="row"], thead th:first-child { text-align: left; white-space: normal; min-width: 11rem; }
-thead th { font-size: .8rem; color: var(--tenue); font-weight: 600; vertical-align: bottom; white-space: normal; }
-tr.mediana th, tr.mediana td { color: var(--tenue); font-weight: 400; font-size: .85rem; }
+/* tabelle: il foglio comune non mette spazio fra le colonne, e due numeri vicini si toccherebbero */
+.scorre { overflow-x: auto; margin: 0 0 10px; }
+.tabella { font-size: .92rem; }
+.tabella :is(th, td) + :is(th, td) { padding-left: 14px; }
+.tabella td { white-space: nowrap; }
+.tabella thead th { font-size: .88rem; color: var(--muted); vertical-align: bottom; border-bottom-color: var(--muted); }
+.tabella th[scope="row"] { font-weight: 400; }
+.tabella:not(.mancanti) th[scope="row"] { min-width: 11rem; }
+/* nomi nelle tabelle lunghe: link del colore del testo, il giallo su centinaia di righe sarebbe rumore */
+.tabella a { color: inherit; text-underline-offset: 2px; }
+.tabella tr.mediana :is(th, td) { color: var(--muted); font-size: .88rem; }
+.tabella tr.totale :is(th, td) { font-weight: 700; }
+.tabella td.motivo { text-align: left; white-space: normal; color: var(--muted); }
 table.parametri td { text-align: center; }
-td.motivo { text-align: left; white-space: normal; color: var(--tenue); }
-tr.totale th, tr.totale td { font-weight: 700; }
-
-.scelta { display: block; margin: .6rem 0; }
-.scelta[hidden] { display: none; }
-.scelta select { font: inherit; max-width: 100%; padding: .2rem; }
-.grafico { width: 100%; min-height: 0; }
-.grafico.pronto { min-height: 22rem; margin-bottom: 1rem; }
-
-.ricerca { margin: 1.5rem 0 0; max-width: 36rem; }
-.ricerca label { display: block; font-weight: 600; margin-bottom: .3rem; }
-/* 16px almeno: sotto, Safari su iPhone ingrandisce la pagina quando si tocca la casella */
-.ricerca input {
-  width: 100%; font: inherit; font-size: 1.05rem; padding: .7rem .8rem;
-  border: 2px solid var(--accento); border-radius: 6px; background: var(--carta); color: inherit;
-}
-.risultati { list-style: none; margin: .3rem 0 0; padding: 0; background: var(--carta); border: 1px solid var(--linea); border-radius: 6px; }
-.risultati li + li { border-top: 1px solid var(--linea); }
-.risultati a { display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .6rem; min-height: 2.75rem; padding: .55rem .8rem; text-decoration: none; color: var(--inchiostro); }
-.risultati span { color: var(--tenue); font-size: .9rem; }
-.risultati a:hover, .risultati [aria-selected="true"] a { background: var(--accento-chiaro); }
-h3 small, th small { color: var(--tenue); font-weight: 400; }
 /* larghezze fisse: le tabelle delle regioni, una sotto l'altra, restano allineate */
 table.mancanti { table-layout: fixed; }
-table.mancanti th, table.mancanti td { white-space: normal; text-align: left; min-width: 0; }
+table.mancanti :is(th, td) { white-space: normal; text-align: left; min-width: 0; }
 table.mancanti :is(th, td):nth-child(1) { width: 34%; }
 table.mancanti :is(th, td):nth-child(2) { width: 24%; }
 table.mancanti :is(th, td):nth-child(3) { width: 15%; text-align: right; white-space: nowrap; }
 table.mancanti :is(th, td):nth-child(4) { width: 27%; }
 
-.fonti li { margin-bottom: .4rem; font-size: .92rem; }
-.usare { background: var(--carta); border: 1px solid var(--linea); border-radius: 6px; padding: .2rem 1rem .4rem; }
-.usare h2 { border-top: 0; }
-.piede { border-top: 1px solid var(--linea); margin-top: 3rem; padding-block: 1rem 2rem; color: var(--tenue); font-size: .9rem; }
+/* andamento: menu della voce e grafico Plotly dentro una scheda */
+.scelta { margin: 0 0 6px; }
+.scelta .campo { width: auto; max-width: 100%; }
+.andamento { margin-bottom: 10px; }
+.andamento-grafico.pronto { min-height: 22rem; }
 
-@media (max-width: 30rem) {
-  th, td { padding: .4rem .35rem; }
-  th[scope="row"], thead th:first-child { min-width: 8rem; }
-  .valore { font-size: 1.4rem; }
+.fonti li { margin-bottom: 4px; font-size: .92rem; }
+.usare { margin-top: 16px; }
+
+/* ricerca del comune */
+.ricerca { max-width: 36rem; margin: 12px 0 0; }
+.risultati { list-style: none; margin: 4px 0 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.risultati li + li { border-top: 1px solid var(--line); }
+.risultati a { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-height: 44px; padding: 10px; color: inherit; text-decoration: none; }
+.risultati span { font-size: .88rem; color: var(--muted); }
+.risultati a:hover, .risultati [aria-selected="true"] a { background: var(--surface-2); }
+
+@media (max-width: 760px) {
+  .solo-telefono { display: inline; }
+  .tabella:not(.mancanti) th[scope="row"] { min-width: 7rem; }
+  .tabella :is(th, td) + :is(th, td) { padding-left: 8px; }
   table.mancanti :is(th, td):nth-child(1) { width: 32%; overflow-wrap: anywhere; }
   table.mancanti :is(th, td):nth-child(2) { width: 22%; }
   table.mancanti :is(th, td):nth-child(3) { width: 20%; }

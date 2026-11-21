@@ -652,6 +652,8 @@ def genera(scelti: list[str] | None = None, ingresso: Path = EXPORT, uscita: Pat
     condivisi = {
         "segnala": f"{REPO}/issues/new", "anni": meta["anni"], "contatto": CONTATTO,
         "consegne_ultimo": elenco_mancanti["conteggi"][-1],
+        # i file dei rendiconti piu' recenti: dicono quanto sono freschi i numeri del sito
+        "aggiornato": articolata(_in_parole(max(meta["data_dei_dati"].values())), "al"),
     }
     prezzi = meta["prezzi"]["valori"]
     pagine = {
@@ -725,7 +727,7 @@ def aggiorna(scelti: list[str] | None = None) -> bool:
     if scelti:
         log.info("sito: %d pagine in %s", genera(scelti), SITO)
         return True
-    ingressi = [EXPORT / "meta.json", *MODELLI.iterdir(), *STATICO.iterdir()]
+    ingressi = [EXPORT / "meta.json", *MODELLI.iterdir(), *STATICO.rglob("*")]
     if SEGNO_FATTO.exists() and SEGNO_FATTO.stat().st_mtime > max(
         i.stat().st_mtime for i in ingressi
     ):

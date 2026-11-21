@@ -3,6 +3,9 @@
 {% block titolo %}{{ nome_gruppo }}: comuni simili nel {{ anno }}{% endblock %}
 {% block descrizione %}Elenco dei {{ g.descrizione }} confrontati fra loro nei rendiconti {{ anno }} da Trasparenza comuni, progetto indipendente non collegato alla Ragioneria Generale dello Stato.{% endblock %}
 
+{% block briciole %}<a href="{{ radice }}">Home</a> › Comuni simili › {{ nome_gruppo }}, {{ anno }}{% endblock %}
+{% block qui %}<ul><li><a href="{{ radice }}{{ percorso }}" aria-current="page">{{ nome_gruppo }}, {{ anno }}</a></li></ul>{% endblock %}
+
 {% block contenuto %}
 <section>
   <p class="sopratitolo">Gruppo di comuni simili · rendiconto {{ anno }}</p>
@@ -11,13 +14,13 @@
   {% if allargato %}
   <p>È un gruppo allargato: lo usano i comuni della fascia i cui gruppi più piccoli hanno meno di {{ minimo_gruppo }} comuni con il rendiconto e i residenti dell'anno. Comprende anche i comuni confrontati con un gruppo più piccolo.</p>
   {% endif %}
-  <p>Nel {{ anno }} il gruppo conta {{ g.comuni|numero }} comuni, {{ g.consegnati|numero }} con il rendiconto. Mediane e posizioni delle pagine dei comuni descrivono solo i comuni che hanno consegnato il rendiconto. <a href="{{ radice }}metodo/#gruppi">Come si formano i gruppi</a>.</p>
+  <p>Nel {{ anno }} il gruppo conta {{ g.comuni|numero }} comuni, {{ g.consegnati|numero }} con il rendiconto. Mediane e posizioni delle pagine dei comuni descrivono solo i comuni che hanno consegnato il rendiconto. <a class="rimando" href="{{ radice }}metodo/#gruppi">Come si formano i gruppi</a>.</p>
 </section>
 
 <section>
-  <h2>Comuni del gruppo</h2>
+  <h2 id="comuni">Comuni del gruppo</h2>
   <div class="scorre">
-  <table class="mancanti">
+  <table class="tabella mancanti">
     <thead><tr><th scope="col">Comune</th><th scope="col">Provincia</th><th scope="col">Residenti</th><th scope="col">Rendiconto {{ anno }}</th></tr></thead>
     <tbody>
     {% for m in membri %}

@@ -146,7 +146,7 @@ def test_pagina_generata(comune, tmp_path):
     assert "Comune di Borgo Prova" in pagina
     assert "1.234 €" in pagina and "sopra l&#39;84% dei comuni simili" in pagina
     assert (
-        '<a href="../../gruppi/2-centro/2024/">comuni da 1.000 a 5.000 abitanti, Centro</a>: '
+        '<a class="rimando" href="../../gruppi/2-centro/2024/">comuni da 1.000 a 5.000 abitanti, Centro</a>: '
         "172 su 180 con il rendiconto 2024"
     ) in pagina
     gruppo = (tmp_path / "sito/gruppi/2-centro/2024/index.html").read_text(encoding="utf-8")
@@ -162,13 +162,17 @@ def test_pagina_generata(comune, tmp_path):
     assert "escluso da una regola del sito" in pagina
     assert "Parametri non presenti nella banca dati OpenBDAP per il 2023" in pagina
     assert "<td>4 su 9</td>" in pagina
-    assert "<h2>Parametri di deficitarietà</h2>" in pagina
+    assert '<h2 id="parametri">Parametri di deficitarietà</h2>' in pagina
+    assert (
+        '<span class="briciole"><a href="../../">Home</a> › Lazio › Comune di Borgo Prova</span>'
+    ) in pagina
+    assert "Dati aggiornati al 3 novembre 2026" in pagina
     assert "dati OpenBDAP del 3 novembre 2026" in pagina
     assert "Pagina generata il 15 novembre 2026" in pagina
     assert 'class="lingua"' not in pagina
     oggetto = "Errore%20nella%20pagina%20di%20Borgo%20Prova%20%28099001%29"
     assert f'<a href="mailto:trasparenza-comuni@albgri.com?subject={oggetto}">' in pagina
-    assert '<a href="andamento-borgo-prova-099001.csv" download>' in pagina
+    assert '<a class="rimando" href="andamento-borgo-prova-099001.csv" download>' in pagina
     assert (
         "«Elaborazione di Trasparenza comuni su dati OpenBDAP (Ragioneria Generale dello Stato) "
         "e ISTAT, rendiconto 2024, dati del 3 novembre 2026», "
@@ -182,8 +186,10 @@ def test_pagina_generata(comune, tmp_path):
     assert "Trasporti e diritto alla mobilità" in pagina
     assert "Riscossione minore del 47%" in pagina
     assert (tmp_path / "sito/statico/stile.css").exists()
+    assert (tmp_path / "sito/statico/stile-comune.css").exists()
+    assert (tmp_path / "sito/statico/caratteri/caratteri.css").exists()
     iniziale = (tmp_path / "sito/index.html").read_text(encoding="utf-8")
-    assert "Rendiconto 2024: 1 comuni presenti nella banca dati, 0 assenti" in iniziale
+    assert "0 <small>senza il rendiconto 2024</small>" in iniziale
     elenco = (tmp_path / "sito/comuni-senza-rendiconto/index.html").read_text(encoding="utf-8")
     assert "Rendiconto 2024 non presente: 0 comuni" in elenco
     metodo = (tmp_path / "sito/metodo/index.html").read_text(encoding="utf-8")

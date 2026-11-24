@@ -15,7 +15,7 @@
     pulsante.setAttribute("aria-label", "Passa al tema " + (s ? "chiaro" : "scuro"));
     if (radice.dataset.tema) {
       document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
-        m.content = s ? "#232025" : "#f4f6fa";
+        m.content = s ? "#232025" : "#f4f6fa"; // stile:consentito (barra del telefono, esadecimale da stile comune)
       });
     }
     document.dispatchEvent(new Event("cambiotema"));

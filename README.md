@@ -1,15 +1,8 @@
 # Trasparenza Comuni
 
-Osservatorio civico sui bilanci dei comuni italiani: quanto spende ogni comune, per quali
-servizi, e come si colloca rispetto ai comuni simili.
+Osservatorio civico sui bilanci dei comuni italiani: quanto spende ogni comune, per quali servizi, e come si colloca rispetto ai comuni simili.
 
-Stato: online su https://trasparenza-comuni.albgri.com/ (indirizzo di riserva
-https://albgri.github.io/trasparenza-comuni/). Il sito copre tutti gli 8.057 comuni, estinti
-compresi, con i rendiconti dal 2016 al 2025 (il 2025 è provvisorio): una pagina per comune con
-gli indicatori ufficiali, il confronto con i comuni simili, l'andamento negli anni e il CSV
-scaricabile; una pagina per gruppo di comuni simili e anno, la ricerca, i comuni senza
-rendiconto, la pagina del metodo e la sitemap. In preparazione: i pagamenti mensili SIOPE e
-un'API pubblica con i dati in JSON.
+Stato: online su https://trasparenza-comuni.albgri.com/ (indirizzo di riserva https://albgri.github.io/trasparenza-comuni/). Il sito copre tutti gli 8.057 comuni, estinti compresi, con i rendiconti dal 2016 al 2025 (il 2025 è provvisorio): una pagina per comune con gli indicatori ufficiali, il confronto con i comuni simili, l'andamento negli anni e il CSV scaricabile; una pagina per gruppo di comuni simili e anno, la ricerca, i comuni senza rendiconto, la pagina del metodo e la sitemap. In preparazione: i pagamenti mensili SIOPE e un'API pubblica con i dati in JSON.
 
 ## Obiettivi
 
@@ -22,19 +15,15 @@ un'API pubblica con i dati in JSON.
 
 Solo dati pubblici ufficiali, citati in ogni pagina:
 
-- OpenBDAP (Ragioneria Generale dello Stato): rendiconti armonizzati dei comuni e indicatori
-  ufficiali, dal 2016
-- SIOPE (Banca d'Italia e Ragioneria Generale dello Stato): incassi e pagamenti mensili (in
-  preparazione)
+- OpenBDAP (Ragioneria Generale dello Stato): rendiconti armonizzati dei comuni e indicatori ufficiali, dal 2016
+- SIOPE (Banca d'Italia e Ragioneria Generale dello Stato): incassi e pagamenti mensili (in preparazione)
 - ISTAT: elenco dei comuni e popolazione residente
 - IndicePA: anagrafica degli enti
 - Eurostat: indice dei prezzi al consumo armonizzato (IPCA) dell'Italia, calcolato da ISTAT
 
 ## Come funziona
 
-Una pipeline Python scarica i dati dalle fonti, li pulisce e calcola indicatori e confronti; il
-risultato sono file statici, da cui nascono il sito e i dati scaricabili. Non ci sono server
-né database in rete.
+Una pipeline Python scarica i dati dalle fonti, li pulisce e calcola indicatori e confronti; il risultato sono file statici, da cui nascono il sito e i dati scaricabili. Non ci sono server né database in rete.
 
 ## Installazione
 
@@ -55,16 +44,9 @@ python -m pipeline      # scarica le fonti, scrive tabelle (data/processed/), JS
 python -m pytest        # prove automatiche
 ```
 
-Il primo lancio scarica tutti gli anni pubblicati da OpenBDAP e dura circa quindici minuti. I
-lanci successivi riscaricano e ricalcolano solo ciò che alla fonte è cambiato. Si può lanciare un
-solo passo (`rendiconti`, `anagrafica`, `popolazione`, `prezzi`, `confronti`, `esportazione`,
-`sito`) e limitare gli anni dei rendiconti, per esempio `python -m pipeline rendiconti --anni 2024`,
-o le pagine da generare, per esempio `python -m pipeline sito --comuni 037006,057039`. Il sito si
-genera solo se i numeri di controllo tornano.
+Il primo lancio scarica tutti gli anni pubblicati da OpenBDAP e dura circa quindici minuti. I lanci successivi riscaricano e ricalcolano solo ciò che alla fonte è cambiato. Si può lanciare un solo passo (`rendiconti`, `anagrafica`, `popolazione`, `prezzi`, `confronti`, `esportazione`, `sito`) e limitare gli anni dei rendiconti, per esempio `python -m pipeline rendiconti --anni 2024`, o le pagine da generare, per esempio `python -m pipeline sito --comuni 037006,057039`. Il sito si genera solo se i numeri di controllo tornano.
 
-A fine lancio la pipeline confronta i numeri di controllo degli anni chiusi (comuni, impegni,
-spesa corrente, residenti, mediane) con quelli attesi in `pipeline/controlli_attesi.csv` ed esce
-con un errore se uno non torna.
+A fine lancio la pipeline confronta i numeri di controllo degli anni chiusi (comuni, impegni, spesa corrente, residenti, mediane) con quelli attesi in `pipeline/controlli_attesi.csv` ed esce con un errore se uno non torna.
 
 Tabelle prodotte, tutte per i soli comuni:
 
@@ -86,14 +68,9 @@ Tabelle prodotte, tutte per i soli comuni:
 | `prezzi` | indice IPCA, media annua | Eurostat |
 | `versioni_fonti` | versione e data di ogni file scaricato | pipeline |
 
-I gruppi uniscono comuni della stessa fascia di abitanti (sei fasce) e della stessa area: le
-regioni ordinarie in quattro aree, ogni regione a statuto speciale a sé. Un gruppo con meno di
-20 comuni si allarga alle regioni dello stesso tipo, poi a tutta Italia, e lo dichiara.
+I gruppi uniscono comuni della stessa fascia di abitanti (sei fasce) e della stessa area: le regioni ordinarie in quattro aree, ogni regione a statuto speciale a sé. Un gruppo con meno di 20 comuni si allarga alle regioni dello stesso tipo, poi a tutta Italia, e lo dichiara.
 
-In `spese` ed `entrate` la colonna `esclusa` segna partite di giro e anticipazioni di cassa, che
-non sono spesa né entrata vera. Gli interessi pagati sulle anticipazioni (missione 60, titolo 1)
-sono spesa e restano, come nel portale OpenBDAP. Gli impegni (competenza) e i pagamenti (cassa) sono misure
-diverse e non vanno sommati né confrontati fra loro.
+In `spese` ed `entrate` la colonna `esclusa` segna partite di giro e anticipazioni di cassa, che non sono spesa né entrata vera. Gli interessi pagati sulle anticipazioni (missione 60, titolo 1) sono spesa e restano, come nel portale OpenBDAP. Gli impegni (competenza) e i pagamenti (cassa) sono misure diverse e non vanno sommati né confrontati fra loro.
 
 ## Esportazione
 
@@ -107,8 +84,7 @@ I file per il sito e per chi vuole riusare i dati, in `data/export/`:
 | `dizionario.json` | nome, unità, misura, fonte e metodo di ogni voce |
 | `meta.json` | data dei dati OpenBDAP per anno, date delle altre fonti, fasce di abitanti, indice dei prezzi |
 
-Un comune estinto prima del 2019 può non avere i residenti ISTAT degli anni in cui esisteva:
-la sua scheda ha gli importi, senza valori per abitante, gruppo e indicatori ufficiali.
+Un comune estinto prima del 2019 può non avere i residenti ISTAT degli anni in cui esisteva: la sua scheda ha gli importi, senza valori per abitante, gruppo e indicatori ufficiali.
 
 ## Struttura
 
@@ -122,7 +98,4 @@ trasparenza-comuni/
 
 ## Licenza
 
-Codice: [AGPL-3.0](LICENSE). Numeri calcolati dal sito: CC BY 4.0, citando Trasparenza comuni e
-le fonti originali. `sito/statico/plotly-basic-2.35.2.min.js` è Plotly.js, con licenza MIT.
-I caratteri in `sito/statico/caratteri/` (Alegreya, Atkinson Hyperlegible Next) hanno la licenza
-SIL Open Font License, nei file `OFL-*.txt` della stessa cartella.
+Codice: [AGPL-3.0](LICENSE). Numeri calcolati dal sito: CC BY 4.0, citando Trasparenza comuni e le fonti originali. `sito/statico/plotly-basic-2.35.2.min.js` è Plotly.js, con licenza MIT. I caratteri in `sito/statico/caratteri/` (Alegreya, Atkinson Hyperlegible Next) hanno la licenza SIL Open Font License, nei file `OFL-*.txt` della stessa cartella.
